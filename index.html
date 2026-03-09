@@ -212,10 +212,17 @@ const msalConfig = {
   auth: { clientId: CLIENT_ID, authority: `https://login.microsoftonline.com/${TENANT_ID}`, redirectUri: window.location.href.split('?')[0] },
   cache: { cacheLocation: 'sessionStorage' }
 };
-const msalInstance = new msal.PublicClientApplication(msalConfig);
+let msalInstance = null;
+
+async function initMsal() {
+  if (msalInstance) return;
+  msalInstance = new msal.PublicClientApplication(msalConfig);
+  await msalInstance.initialize();
+}
 
 async function login() {
   try {
+    await initMsal();
     await msalInstance.loginPopup({ scopes: ['Files.Read', 'User.Read'] });
     document.getElementById('loginScreen').style.display = 'none';
     loadData();
@@ -224,12 +231,14 @@ async function login() {
   }
 }
 
-function logout() {
+async function logout() {
+  await initMsal();
   msalInstance.logoutPopup();
   document.getElementById('loginScreen').style.display = 'flex';
 }
 
 async function getToken() {
+  await initMsal();
   const accounts = msalInstance.getAllAccounts();
   if (!accounts.length) return null;
   const resp = await msalInstance.acquireTokenSilent({ scopes: ['Files.Read'], account: accounts[0] });
@@ -443,7 +452,7 @@ function renderDashboard(data) {
 
 // Check if already logged in
 window.addEventListener('load', async () => {
-  await msalInstance.initialize();
+  await initMsal();
   const accounts = msalInstance.getAllAccounts();
   if (accounts.length > 0) {
     document.getElementById('loginScreen').style.display = 'none';
