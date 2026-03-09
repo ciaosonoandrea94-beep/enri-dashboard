@@ -140,6 +140,8 @@ const STATI = ['IN ATTESA','IN REDAZIONE','IN FIRMA RDS','INVIATO','PROTOCOLLATO
 const COLORS = {'IN ATTESA':'#4a4f6a','IN REDAZIONE':'#c9a227','IN FIRMA RDS':'#e07b3a','INVIATO':'#4f8ef7','PROTOCOLLATO':'#2f5496','NECESSARIA INTEGRAZIONE':'#cc3333','PROTOCOLLATO INTEGRAZIONE':'#548235','OTTENUTO':'#3a8c5c'};
 const CSV_URL = 'dati.csv';
 
+function setLoading(p) { document.getElementById('loadingBar').style.width = p+'%'; }
+function fmt(n) { return Math.round(n).toLocaleString('it-IT'); }
 function parseNum(s) { if(!s||s.trim()==='') return 0; return parseFloat(s.replace(/\./g,'').replace(',','.')); }
 function parsePct(s) { if(!s||s.trim()==='') return 0; return parseFloat(s.replace('%','').replace(',','.'))/100; }
 
