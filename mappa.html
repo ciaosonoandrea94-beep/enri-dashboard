@@ -34,7 +34,7 @@
   #map { flex:1; }
 
   /* SIDEBAR */
-  .sidebar { width:260px; background:var(--surface); border-left:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; flex-shrink:0; transition:transform 0.3s; }
+  .sidebar { width:310px; background:var(--surface); border-left:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; flex-shrink:0; transition:transform 0.3s; }
   .sidebar-head { padding:14px 16px 10px; border-bottom:1px solid var(--border); flex-shrink:0; }
   .sidebar-title { font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); margin-bottom:10px; }
   .filter-row { display:flex; flex-wrap:wrap; gap:5px; align-items:center; }
@@ -252,8 +252,7 @@ function renderSidebar(stats) {
 
   // Separatore Attivi
   const lblAttivi = document.createElement('span');
-  lblAttivi.style.cssText = 'font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--accent);align-self:center;margin-left:6px;margin-right:2px;';
-  lblAttivi.textContent = '⚡';
+  lblAttivi.style.cssText = 'width:1px;height:16px;background:var(--border);align-self:center;margin:0 4px;';
   filterRow.appendChild(lblAttivi);
 
   LOTTI_ATTIVI.forEach(id => {
