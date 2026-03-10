@@ -30,7 +30,7 @@
   .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .main { padding: 20px 28px; display: flex; flex-direction: column; gap: 18px; }
-  .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+  .kpi-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; }
   .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; position: relative; overflow: hidden; }
   .kpi::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
   .kpi.attesa::before { background: var(--attesa); }
@@ -39,6 +39,10 @@
   .kpi.inviato::before { background: var(--inviato); }
   .kpi.protocollato::before { background: var(--protocollato); }
   .kpi.protocollato .kpi-value { color: var(--protocollato); }
+  .kpi.integrazione::before { background: #cc3333; }
+  .kpi.integrazione .kpi-value { color: #cc3333; }
+  .kpi.protint::before { background: #548235; }
+  .kpi.protint .kpi-value { color: #548235; }
   .kpi.ottenuto::before { background: var(--ottenuto); }
   .kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 10px; }
   .kpi-value { font-size: 28px; font-weight: 600; font-family: 'DM Mono', monospace; line-height: 1; }
@@ -75,26 +79,37 @@
   .stato-pill { display: inline-block; font-size: 9px; padding: 2px 7px; border-radius: 10px; font-family: 'DM Mono', monospace; }
   .tooltip { position: fixed; background: #0f1117ee; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 11px; pointer-events: none; z-index: 1000; opacity: 0; transition: opacity 0.15s; font-family: 'DM Mono', monospace; }
   #errorBox { display: none; background: #cc333311; border: 1px solid #cc333344; border-radius: 8px; padding: 14px 18px; color: #cc3333; font-size: 13px; }
-  .milestone-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
-  .ms-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; display: flex; align-items: center; gap: 14px; position: relative; overflow: hidden; }
-  .ms-card::before { content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 3px; }
+  .milestone-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .ms-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; position: relative; overflow: hidden; }
+  .ms-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
   .ms-card.ok::before { background: #3a8c5c; }
   .ms-card.warn::before { background: #c9a227; }
   .ms-card.danger::before { background: #cc3333; }
   .ms-card.future::before { background: #4f8ef7; }
-  .ms-num { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--muted); background: var(--surface2); border-radius: 4px; padding: 2px 6px; flex-shrink: 0; }
-  .ms-body { flex: 1; min-width: 0; }
-  .ms-title { font-size: 11px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ms-lotti { font-size: 10px; color: var(--muted); margin-top: 2px; }
-  .ms-countdown { text-align: right; flex-shrink: 0; }
-  .ms-days { font-size: 18px; font-weight: 600; font-family: 'DM Mono', monospace; line-height: 1; }
-  .ms-days-label { font-size: 9px; color: var(--muted); margin-top: 2px; }
-  .ms-date { font-size: 10px; color: var(--muted); margin-top: 3px; }
+  .ms-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .ms-num { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--muted); background: var(--surface2); border-radius: 4px; padding: 2px 7px; flex-shrink: 0; }
+  .ms-date { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--muted); }
+  .ms-title { font-size: 12px; font-weight: 600; color: var(--text); line-height: 1.4; }
+  .ms-lotti { font-size: 10px; color: var(--muted); }
+  .ms-bottom { display: flex; align-items: baseline; gap: 6px; margin-top: 2px; }
+  .ms-days { font-size: 22px; font-weight: 700; font-family: 'DM Mono', monospace; line-height: 1; }
+  .ms-days-label { font-size: 11px; color: var(--muted); }
   .ms-card.ok .ms-days { color: #3a8c5c; }
   .ms-card.warn .ms-days { color: #c9a227; }
   .ms-card.danger .ms-days { color: #cc3333; }
   .ms-card.future .ms-days { color: #4f8ef7; }
-  .section-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 6px; }
+  .bar-ms-wrap { display: flex; flex-direction: column; flex-shrink: 0; gap: 4px; background: #181c2a; border-radius: 8px; padding: 6px 10px; border: 1px solid #2e3347; }
+  .bar-ms-wrap-header { font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #8090b0; text-align: center; padding-bottom: 4px; border-bottom: 1px solid #2e3347; }
+  .bar-ms-cols { display: flex; gap: 4px; }
+  .bar-ms { min-width: 68px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; cursor: default; border-radius: 5px; padding: 4px 6px; border-left: 2px solid transparent; }
+  .bar-ms.ms-invio   { border-left-color: #3a7a4a; }
+  .bar-ms.ms-parziale{ border-left-color: #8a7a20; }
+  .bar-ms.ms-finale  { border-left-color: #3a4a8a; }
+  .bar-ms-label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px; }
+  .bar-ms.ms-invio    .bar-ms-label { color: #3a7a4a; }
+  .bar-ms.ms-parziale .bar-ms-label { color: #8a7a20; }
+  .bar-ms.ms-finale   .bar-ms-label { color: #3a4a8a; }
+  .bar-ms-val { font-size: 12px; font-weight: 700; font-family: 'DM Mono', monospace; }
 </style>
 </head>
 <body>
@@ -120,16 +135,13 @@
 <div class="main">
   <div id="errorBox"></div>
   <div class="kpi-row">
-    <div class="kpi attesa"><div class="kpi-label">In Attesa</div><div class="kpi-value" id="kpi-attesa">—</div><div class="kpi-sub" id="kpisub-attesa">—</div></div>
-    <div class="kpi redazione"><div class="kpi-label">In Redazione</div><div class="kpi-value" id="kpi-redazione">—</div><div class="kpi-sub" id="kpisub-redazione">—</div></div>
+    <div class="kpi attesa"><div class="kpi-label">In Attesa / Redazione</div><div class="kpi-value" id="kpi-attesa">—</div><div class="kpi-sub" id="kpisub-attesa">—</div></div>
     <div class="kpi firma"><div class="kpi-label">In Firma RDS</div><div class="kpi-value" id="kpi-firma">—</div><div class="kpi-sub" id="kpisub-firma">—</div></div>
     <div class="kpi inviato"><div class="kpi-label">Inviato</div><div class="kpi-value" id="kpi-inviato">—</div><div class="kpi-sub" id="kpisub-inviato">—</div></div>
     <div class="kpi protocollato"><div class="kpi-label">Protocollato</div><div class="kpi-value" id="kpi-protocollato">—</div><div class="kpi-sub" id="kpisub-protocollato">—</div></div>
+    <div class="kpi integrazione"><div class="kpi-label">Necessaria Integrazione</div><div class="kpi-value" id="kpi-integrazione">—</div><div class="kpi-sub" id="kpisub-integrazione">—</div></div>
+    <div class="kpi protint"><div class="kpi-label">Protocollato Integrazione</div><div class="kpi-value" id="kpi-protint">—</div><div class="kpi-sub" id="kpisub-protint">—</div></div>
     <div class="kpi ottenuto"><div class="kpi-label">Ottenuto</div><div class="kpi-value" id="kpi-ottenuto">—</div><div class="kpi-sub" id="kpisub-ottenuto">—</div></div>
-  </div>
-  <div>
-    <div class="section-label">📅 Milestone di progetto</div>
-    <div class="milestone-grid" id="milestoneGrid"></div>
   </div>
   <div class="grid-main">
     <div class="card">
@@ -137,13 +149,30 @@
         <span class="card-title">Avanzamento per Lotto — % metri</span>
         <span style="font-size:10px;color:var(--muted)" id="totaleMetri">—</span>
       </div>
-      <div class="card-body"><div class="chart-wrap" id="chartWrap"></div></div>
+      <div class="card-body">
+        <div class="bar-row" style="margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--border)">
+          <span class="bar-lotto"></span>
+          <div style="flex:1"></div>
+          <span class="bar-pct"></span>
+          <div class="bar-ms-wrap">
+            <div class="bar-ms-wrap-header">📅 Milestone</div>
+            <div class="bar-ms-cols">
+              <div class="bar-ms ms-invio"><span class="bar-ms-label">Invio Permessi</span></div>
+              <div class="bar-ms ms-parziale"><span class="bar-ms-label">Parziale</span></div>
+              <div class="bar-ms ms-finale"><span class="bar-ms-label">Finale</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="chart-wrap" id="chartWrap"></div>
+      </div>
       <div class="legend">
-        <div class="legend-item"><div class="legend-dot" style="background:#4a4f6a"></div>In Attesa</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#c9a227"></div>In Redazione</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#4a4f6a"></div>In Attesa / Redazione</div>
         <div class="legend-item"><div class="legend-dot" style="background:#e07b3a"></div>In Firma RDS</div>
         <div class="legend-item"><div class="legend-dot" style="background:#4f8ef7"></div>Inviato</div>
         <div class="legend-item"><div class="legend-dot" style="background:#2f5496"></div>Protocollato</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#cc3333"></div>Necessaria Integrazione</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#a04fc0"></div>In Redazione Integrazione</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#548235"></div>Protocollato Integrazione</div>
         <div class="legend-item"><div class="legend-dot" style="background:#3a8c5c"></div>Ottenuto</div>
       </div>
     </div>
@@ -160,8 +189,18 @@
   </div>
 </div>
 <script>
-const STATI = ['IN ATTESA','IN REDAZIONE','IN FIRMA RDS','INVIATO','PROTOCOLLATO','NECESSARIA INTEGRAZIONE','PROTOCOLLATO INTEGRAZIONE','OTTENUTO'];
-const COLORS = {'IN ATTESA':'#4a4f6a','IN REDAZIONE':'#c9a227','IN FIRMA RDS':'#e07b3a','INVIATO':'#4f8ef7','PROTOCOLLATO':'#2f5496','NECESSARIA INTEGRAZIONE':'#cc3333','PROTOCOLLATO INTEGRAZIONE':'#548235','OTTENUTO':'#3a8c5c'};
+const STATI = ['IN ATTESA','IN REDAZIONE','IN FIRMA RDS','INVIATO','PROTOCOLLATO','NECESSARIA INTEGRAZIONE','IN REDAZIONE INTEGRAZIONE','PROTOCOLLATO INTEGRAZIONE','OTTENUTO'];
+const COLORS = {
+  'IN ATTESA':                  '#4a4f6a',
+  'IN REDAZIONE':               '#4a4f6a',
+  'IN FIRMA RDS':               '#e07b3a',
+  'INVIATO':                    '#4f8ef7',
+  'PROTOCOLLATO':               '#2f5496',
+  'NECESSARIA INTEGRAZIONE':    '#cc3333',
+  'IN REDAZIONE INTEGRAZIONE':  '#4a4f6a',
+  'PROTOCOLLATO INTEGRAZIONE':  '#548235',
+  'OTTENUTO':                   '#3a8c5c'
+};
 const CSV_URL = 'dati.csv';
 
 function setLoading(p) { document.getElementById('loadingBar').style.width = p+'%'; }
@@ -215,6 +254,66 @@ async function loadData() {
   }
 }
 
+function getMilestoneCountdown(data) {
+  const oggi = new Date(); oggi.setHours(0,0,0,0);
+  const scad = new Date(data);
+  const diffGiorni = Math.ceil((scad - oggi) / (1000*60*60*24));
+  let colore, label;
+  if (diffGiorni < 0) {
+    colore = '#3a8c5c'; label = '✓';
+  } else if (diffGiorni <= 90) {
+    colore = '#cc3333'; label = diffGiorni+'gg';
+  } else if (diffGiorni <= 180) {
+    colore = '#c9a227'; label = Math.floor(diffGiorni/30.44)+'m';
+  } else {
+    colore = '#4f8ef7';
+    const anniR = Math.floor(diffGiorni/365.25);
+    const mesiR = Math.round((diffGiorni % 365.25) / 30.44);
+    label = anniR >= 1 ? (mesiR > 0 ? `${anniR}a ${mesiR}m` : `${anniR}a`) : Math.floor(diffGiorni/30.44)+'m';
+  }
+  const dataFmt = new Date(data).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'2-digit'});
+  return { colore, label, dataFmt };
+}
+
+function getMilestoneForLotto(lotto) {
+  const oggi = new Date(); oggi.setHours(0,0,0,0);
+  const lista = MILESTONES_PER_LOTTO[lotto];
+  if (!lista || !lista.length) return null;
+  const future = lista.find(ms => new Date(ms.data) >= oggi);
+  const ms = future || lista[lista.length-1];
+  const scad = new Date(ms.data);
+  const diffGiorni = Math.ceil((scad - oggi) / (1000*60*60*24));
+  let colore, label;
+  if (diffGiorni < 0) { colore='#3a8c5c'; label='✓'; }
+  else if (diffGiorni<=90) { colore='#cc3333'; label=diffGiorni+'gg'; }
+  else if (diffGiorni<=180) { colore='#c9a227'; label=Math.floor(diffGiorni/30.44)+'m'; }
+  else {
+    colore='#4f8ef7';
+    const anniR=Math.floor(diffGiorni/365.25), mesiR=Math.round((diffGiorni%365.25)/30.44);
+    label=anniR>=1?(mesiR>0?`${anniR}a ${mesiR}m`:`${anniR}a`):Math.floor(diffGiorni/30.44)+'m';
+  }
+  const dataFmt=scad.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
+  return { colore, label, tooltipText:`[${ms.num}] ${ms.titolo} — ${dataFmt}` };
+}
+
+function getMilestonesHtml(lotto) {
+  const lista = MILESTONES_PER_LOTTO[lotto];
+  if (!lista) return '';
+  const labels = ['Invio', lista.length===3 ? (lista[1].titolo.includes('90')? '90%':'50%') : '100%', '100%'];
+  const items = lista.length === 2
+    ? [lista[0], null, lista[1]]
+    : lista;
+  const labelsFixed = lista.length === 2 ? ['Invio', '—', '100%'] : labels;
+
+  const classi = ['ms-invio', 'ms-parziale', 'ms-finale'];
+  return '<div class="bar-ms-wrap"><div class="bar-ms-cols">' + items.map((ms, i) => {
+    if (!ms) return `<div class="bar-ms ${classi[i]}"><span class="bar-ms-val" style="color:var(--muted)">—</span></div>`;
+    const { colore, label } = getMilestoneCountdown(ms.data);
+    const tip = `[${ms.num}] ${ms.titolo} — ${new Date(ms.data).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'})}`;
+    return `<div class="bar-ms ${classi[i]}" data-ms-tip="${tip}"><span class="bar-ms-val" style="color:${colore}">${label}</span></div>`;
+  }).join('') + '</div></div>';
+}
+
 function renderDashboard(data) {
   const lottiMap={}, lottiTotale={};
   data.forEach(d=>{
@@ -228,7 +327,15 @@ function renderDashboard(data) {
   lotti.forEach(l=>{grandTotal+=lottiTotale[l];Object.entries(lottiMap[l]).forEach(([s,m])=>{globalStati[s]=(globalStati[s]||0)+m;});});
 
   // KPI
-  const kpiMap={attesa:['IN ATTESA'],redazione:['IN REDAZIONE'],firma:['IN FIRMA RDS'],inviato:['INVIATO'],protocollato:['PROTOCOLLATO','NECESSARIA INTEGRAZIONE','PROTOCOLLATO INTEGRAZIONE'],ottenuto:['OTTENUTO']};
+  const kpiMap={
+    attesa:       ['IN ATTESA','IN REDAZIONE','IN REDAZIONE INTEGRAZIONE'],
+    firma:        ['IN FIRMA RDS'],
+    inviato:      ['INVIATO'],
+    protocollato: ['PROTOCOLLATO'],
+    integrazione: ['NECESSARIA INTEGRAZIONE'],
+    protint:      ['PROTOCOLLATO INTEGRAZIONE'],
+    ottenuto:     ['OTTENUTO']
+  };
   Object.entries(kpiMap).forEach(([key,stati])=>{
     const metri=stati.reduce((s,st)=>s+(globalStati[st]||0),0);
     const pct=grandTotal>0?metri/grandTotal*100:0;
@@ -253,10 +360,15 @@ function renderDashboard(data) {
     });
     const row=document.createElement('div');
     row.className='bar-row';
-    row.innerHTML=`<span class="bar-lotto">${lotto}</span><div class="bar-track">${segsHtml}</div><span class="bar-pct">${avanzato>0?avanzato.toFixed(0)+'%':'—'}</span>`;
+    const msHtml = getMilestonesHtml(lotto);
+    row.innerHTML=`<span class="bar-lotto">${lotto}</span><div class="bar-track">${segsHtml}</div><span class="bar-pct">${avanzato>0?avanzato.toFixed(0)+'%':'—'}</span>${msHtml}`;
     row.querySelectorAll('.bar-seg').forEach(seg=>{
       seg.addEventListener('mousemove',e=>{tooltip.textContent=seg.getAttribute('data-tip');tooltip.style.opacity='1';tooltip.style.left=(e.clientX+12)+'px';tooltip.style.top=(e.clientY-28)+'px';});
       seg.addEventListener('mouseleave',()=>{tooltip.style.opacity='0';});
+    });
+    row.querySelectorAll('.bar-ms[data-ms-tip]').forEach(el=>{
+      el.addEventListener('mousemove',e=>{tooltip.textContent=el.getAttribute('data-ms-tip');tooltip.style.opacity='1';tooltip.style.left=(e.clientX+12)+'px';tooltip.style.top=(e.clientY-28)+'px';});
+      el.addEventListener('mouseleave',()=>{tooltip.style.opacity='0';});
     });
     wrap.appendChild(row);
   });
@@ -306,14 +418,30 @@ function renderDashboard(data) {
 }
 const MILESTONES = [
   { num:'01', titolo:'Invio tutte le richieste permessi', lotti:'Tutti i lotti', data:'2026-09-30' },
-  { num:'02', titolo:'1° Rilascio — Realizzazione 90%', lotti:'1A · 1B · 2A · 2B', data:'2026-10-31' },
+  { num:'02', titolo:'1° Rilascio — Realizzazione 90%',  lotti:'1A · 1B · 2A · 2B', data:'2026-10-31' },
   { num:'03', titolo:'2° Rilascio — Realizzazione 100%', lotti:'1A · 1B · 2A · 2B', data:'2026-12-31' },
-  { num:'04', titolo:'1° Rilascio — Realizzazione 50%', lotti:'1 · 2 · 3 · 4 · 5', data:'2027-04-30' },
-  { num:'05', titolo:'1° Rilascio — Realizzazione 50%', lotti:'6', data:'2027-05-31' },
+  { num:'04', titolo:'1° Rilascio — Realizzazione 50%',  lotti:'1 · 2 · 3 · 4 · 5', data:'2027-04-30' },
+  { num:'05', titolo:'1° Rilascio — Realizzazione 50%',  lotti:'6', data:'2027-05-31' },
   { num:'06', titolo:'2° Rilascio — Realizzazione 100%', lotti:'1 · 2 · 3 · 4 · 5 · 6', data:'2027-11-15' },
   { num:'07', titolo:'2° Rilascio — Realizzazione 100%', lotti:'8', data:'2028-03-31' },
   { num:'08', titolo:'3° Rilascio — Realizzazione 100%', lotti:'7', data:'2028-07-31' },
 ];
+
+// Per ogni lotto, le 3 milestone specifiche in ordine cronologico
+const MILESTONES_PER_LOTTO = {
+  '1':  [{num:'01',titolo:'Invio richieste permessi',data:'2026-09-30'},{num:'04',titolo:'1° Rilascio — 50%',data:'2027-04-30'},{num:'06',titolo:'2° Rilascio — 100%',data:'2027-11-15'}],
+  '1A': [{num:'01',titolo:'Invio richieste permessi',data:'2026-09-30'},{num:'02',titolo:'1° Rilascio — 90%',data:'2026-10-31'},{num:'03',titolo:'2° Rilascio — 100%',data:'2026-12-31'}],
+  '1B': [{num:'01',titolo:'Invio richieste permessi',data:'2026-09-30'},{num:'02',titolo:'1° Rilascio — 90%',data:'2026-10-31'},{num:'03',titolo:'2° Rilascio — 100%',data:'2026-12-31'}],
+  '2':  [{num:'01',titolo:'Invio richieste permessi',data:'2026-09-30'},{num:'04',titolo:'1° Rilascio — 50%',data:'2027-04-30'},{num:'06',titolo:'2° Rilascio — 100%',data:'2027-11-15'}],
+  '2A': [{num:'01',titolo:'Invio richieste permessi',data:'2026-09-30'},{num:'02',titolo:'1° Rilascio — 90%',data:'2026-10-31'},{num:'03',titolo:'2° Rilascio — 100%',data:'2026-12-31'}],
+  '2B': [{num:'01',titolo:'Invio richieste permessi',data:'2026-09-30'},{num:'02',titolo:'1° Rilascio — 90%',data:'2026-10-31'},{num:'03',titolo:'2° Rilascio — 100%',data:'2026-12-31'}],
+  '3':  [{num:'01',titolo:'Invio richieste permessi',data:'2026-09-30'},{num:'04',titolo:'1° Rilascio — 50%',data:'2027-04-30'},{num:'06',titolo:'2° Rilascio — 100%',data:'2027-11-15'}],
+  '4':  [{num:'01',titolo:'Invio richieste permessi',data:'2026-09-30'},{num:'04',titolo:'1° Rilascio — 50%',data:'2027-04-30'},{num:'06',titolo:'2° Rilascio — 100%',data:'2027-11-15'}],
+  '5':  [{num:'01',titolo:'Invio richieste permessi',data:'2026-09-30'},{num:'04',titolo:'1° Rilascio — 50%',data:'2027-04-30'},{num:'06',titolo:'2° Rilascio — 100%',data:'2027-11-15'}],
+  '6':  [{num:'01',titolo:'Invio richieste permessi',data:'2026-09-30'},{num:'05',titolo:'1° Rilascio — 50%',data:'2027-05-31'},{num:'06',titolo:'2° Rilascio — 100%',data:'2027-11-15'}],
+  '7':  [{num:'01',titolo:'Invio richieste permessi',data:'2026-09-30'},{num:'08',titolo:'3° Rilascio — 100%',data:'2028-07-31'}],
+  '8':  [{num:'01',titolo:'Invio richieste permessi',data:'2026-09-30'},{num:'07',titolo:'2° Rilascio — 100%',data:'2028-03-31'}],
+};
 
 function renderMilestones() {
   const grid = document.getElementById('milestoneGrid');
@@ -329,44 +457,43 @@ function renderMilestones() {
     let classe, countdownHTML;
     if (diffGiorni < 0) {
       classe = 'ok';
-      countdownHTML = `<div class="ms-days">✓</div><div class="ms-days-label">Completata</div>`;
+      countdownHTML = `<span class="ms-days">✓</span><span class="ms-days-label">Completata</span>`;
     } else if (diffGiorni <= 90) {
       classe = 'danger';
-      countdownHTML = `<div class="ms-days">${diffGiorni}g</div><div class="ms-days-label">rimanenti</div>`;
+      countdownHTML = `<span class="ms-days">${diffGiorni}</span><span class="ms-days-label">giorni rimanenti</span>`;
     } else if (diffGiorni <= 180) {
       classe = 'warn';
-      const label = diffMesi > 1 ? `${diffMesi} mesi` : `${diffGiorni}g`;
-      countdownHTML = `<div class="ms-days">${label}</div><div class="ms-days-label">rimanenti</div>`;
+      countdownHTML = `<span class="ms-days">${diffMesi}</span><span class="ms-days-label">mesi rimanenti</span>`;
     } else {
       classe = 'future';
-      let label;
+      let label, sublabel;
       if (diffAnni >= 1) {
         const anniR = Math.floor(diffGiorni/365.25);
         const mesiR = Math.round((diffGiorni % 365.25) / 30.44);
-        label = mesiR > 0 ? `${anniR}a ${mesiR}m` : `${anniR} anno`;
+        label = anniR; sublabel = mesiR > 0 ? `ann${anniR>1?'i':'o'} e ${mesiR} mesi rimanenti` : `ann${anniR>1?'i':'o'} rimanenti`;
       } else {
-        label = `${diffMesi} mesi`;
+        label = diffMesi; sublabel = 'mesi rimanenti';
       }
-      countdownHTML = `<div class="ms-days">${label}</div><div class="ms-days-label">rimanenti</div>`;
+      countdownHTML = `<span class="ms-days">${label}</span><span class="ms-days-label">${sublabel}</span>`;
     }
 
     const dataFmt = scad.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
     const card = document.createElement('div');
     card.className = `ms-card ${classe}`;
     card.innerHTML = `
-      <span class="ms-num">${ms.num}</span>
-      <div class="ms-body">
-        <div class="ms-title">${ms.titolo}</div>
-        <div class="ms-lotti">Lotti: ${ms.lotti}</div>
-        <div class="ms-date">📅 ${dataFmt}</div>
+      <div class="ms-top">
+        <span class="ms-num">${ms.num}</span>
+        <span class="ms-date">📅 ${dataFmt}</span>
       </div>
-      <div class="ms-countdown">${countdownHTML}</div>
+      <div class="ms-title">${ms.titolo}</div>
+      <div class="ms-lotti">Lotti: ${ms.lotti}</div>
+      <div class="ms-bottom">${countdownHTML}</div>
     `;
     grid.appendChild(card);
   });
 }
 
-window.addEventListener('load', () => { renderMilestones(); loadData(); });
+window.addEventListener('load', () => { loadData(); });
 </script>
 </body>
 </html>
