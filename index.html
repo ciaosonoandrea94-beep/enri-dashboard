@@ -28,7 +28,18 @@
   #loadingBar { position: fixed; top: 0; left: 0; height: 2px; background: var(--accent); width: 0%; transition: width 0.4s; z-index: 999; }
   #loadingScreen { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 100; }
   .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  @media print {
+    @page { size: A4 landscape; margin: 12mm; }
+    body { background: #fff !important; color: #111 !important; }
+    .topbar-right .btn, .topbar-right a { display: none !important; }
+    #loadingBar, #loadingScreen { display: none !important; }
+    .topbar { background: #1a1d27 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .main { padding: 10px !important; }
+    .card, .kpi { -webkit-print-color-adjust: exact; print-color-adjust: exact; break-inside: avoid; }
+    .grid-main { grid-template-columns: 1fr 280px !important; }
+    .bar-ms-wrap { break-inside: avoid; }
+    canvas { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
   .main { padding: 20px 28px; display: flex; flex-direction: column; gap: 18px; }
   .kpi-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; }
   .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; position: relative; overflow: hidden; }
@@ -130,6 +141,7 @@
     <span class="badge" id="statusBadge">⏳ Caricamento</span>
     <a href="https://qgiscloud.com/andreaindino14/Progetto_ENRI_WEB2/?l=Punti%20Interesse!%2CInterferenze!%2Cinfrastruttura_ENRI%2CSatellite&t=Progetto_ENRI_WEB2&e=1008597%2C5670702%2C1037949%2C5683983" target="_blank" style="font-size:11px;padding:5px 14px;border-radius:5px;background:var(--surface2);color:var(--text);border:1px solid var(--border);cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;text-decoration:none;transition:opacity 0.2s" onmouseover="this.style.opacity=0.75" onmouseout="this.style.opacity=1">🗺 Mappa QGIS</a>
     <button class="btn" onclick="loadData()">↻ Aggiorna</button>
+    <button class="btn" style="background:#2f5496" onclick="exportPDF()">⬇ Esporta PDF</button>
   </div>
 </div>
 <div class="main">
@@ -193,6 +205,13 @@
         <div class="card-header"><span class="card-title">Dettaglio Lotti Attivi</span></div>
         <div id="lottiTable"></div>
       </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Distribuzione Stati</span></div>
+        <div class="card-body" style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px">
+          <canvas id="donutCanvas" width="200" height="200"></canvas>
+          <div id="donutLegend" style="width:100%;display:flex;flex-direction:column;gap:5px"></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -215,6 +234,18 @@ function setLoading(p) { document.getElementById('loadingBar').style.width = p+'
 function fmt(n) { return Math.round(n).toLocaleString('it-IT'); }
 function parseNum(s) { if(!s||s.trim()==='') return 0; return parseFloat(s.replace(/\./g,'').replace(',','.')); }
 function parsePct(s) { if(!s||s.trim()==='') return 0; return parseFloat(s.replace('%','').replace(',','.'))/100; }
+
+function exportPDF() {
+  const btn = document.querySelector('[onclick="exportPDF()"]');
+  btn.textContent = '⏳ Preparazione...';
+  btn.disabled = true;
+  // Piccolo delay per render completo del canvas
+  setTimeout(() => {
+    window.print();
+    btn.textContent = '⬇ Esporta PDF';
+    btn.disabled = false;
+  }, 300);
+}
 
 async function loadData() {
   setLoading(10);
@@ -429,6 +460,72 @@ function renderDashboard(data) {
   });
   html+='</tbody></table>';
   tableDiv.innerHTML=html;
+
+  renderDonut(globalStati, grandTotal);
+}
+function renderDonut(globalStati, grandTotal) {
+  const canvas = document.getElementById('donutCanvas');
+  const ctx = canvas.getContext('2d');
+  const cx = 100, cy = 100, r = 78, rIn = 52;
+
+  const STATI_INATTIVI = ['IN ATTESA','IN REDAZIONE','IN REDAZIONE INTEGRAZIONE'];
+
+  // Raggruppa inattivi + mostra tutti gli altri stati
+  const grouped = [];
+  const inativoMetri = STATI_INATTIVI.reduce((s,st) => s + (globalStati[st]||0), 0);
+  if (inativoMetri > 0) grouped.push({ label: 'In Attesa / Redazione', metri: inativoMetri, color: '#4a4f6a' });
+  ['IN FIRMA RDS','INVIATO','PROTOCOLLATO','NECESSARIA INTEGRAZIONE','PROTOCOLLATO INTEGRAZIONE','OTTENUTO'].forEach(s => {
+    const m = globalStati[s] || 0;
+    if (m > 0) grouped.push({ label: s.replace('IN ',''), metri: m, color: COLORS[s] });
+  });
+
+  ctx.clearRect(0, 0, 200, 200);
+  let startAngle = -Math.PI / 2;
+  grouped.forEach(s => {
+    const angle = (s.metri / grandTotal) * 2 * Math.PI;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, startAngle, startAngle + angle);
+    ctx.closePath();
+    ctx.fillStyle = s.color;
+    ctx.fill();
+    startAngle += angle;
+  });
+
+  // Foro centrale
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, 2 * Math.PI);
+  ctx.fillStyle = '#1a1d27';
+  ctx.fill();
+
+  // % avanzamento al centro
+  const avanzMetri = grandTotal - inativoMetri;
+  const pctAvanz = grandTotal > 0 ? (avanzMetri / grandTotal * 100) : 0;
+  ctx.fillStyle = '#e8eaf0';
+  ctx.font = 'bold 18px DM Mono, monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(pctAvanz.toFixed(1) + '%', cx, cy - 8);
+  ctx.font = '10px DM Sans, sans-serif';
+  ctx.fillStyle = '#6b7080';
+  ctx.fillText('avanzato', cx, cy + 10);
+
+  // Legenda
+  const legend = document.getElementById('donutLegend');
+  legend.innerHTML = '';
+  grouped.forEach(s => {
+    const pct = (s.metri / grandTotal * 100).toFixed(1);
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;font-size:10px;';
+    row.innerHTML = `
+      <div style="display:flex;align-items:center;gap:6px">
+        <div style="width:8px;height:8px;border-radius:2px;background:${s.color};flex-shrink:0"></div>
+        <span style="color:var(--muted)">${s.label}</span>
+      </div>
+      <span style="font-family:'DM Mono',monospace;color:${s.color}">${pct}%</span>
+    `;
+    legend.appendChild(row);
+  });
 }
 const MILESTONES = [
   { num:'01', titolo:'Invio tutte le richieste permessi', lotti:'Tutti i lotti', data:'2026-09-30' },
