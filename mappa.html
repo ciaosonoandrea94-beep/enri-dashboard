@@ -131,11 +131,9 @@
     <div class="sidebar-body" id="lottoList"></div>
     <div class="legend">
       <div class="legend-title">Stato autorizzazione</div>
-      <div class="legend-item"><div class="legend-line" style="background:#4a4f6a"></div>In Attesa</div>
-      <div class="legend-item"><div class="legend-line" style="background:#c9a227"></div>In Redazione</div>
+      <div class="legend-item"><div class="legend-line" style="background:#4a4f6a"></div>In Attesa / Redazione</div>
       <div class="legend-item"><div class="legend-line" style="background:#e07b3a"></div>In Firma RDS</div>
-      <div class="legend-item"><div class="legend-line" style="background:#4f8ef7"></div>Inviato</div>
-      <div class="legend-item"><div class="legend-line" style="background:#2f5496"></div>Protocollato</div>
+      <div class="legend-item"><div class="legend-line" style="background:#4f8ef7"></div>Inviato / Protocollato</div>
       <div class="legend-item"><div class="legend-line" style="background:#cc3333"></div>Necessaria Integrazione</div>
       <div class="legend-item"><div class="legend-line" style="background:#548235"></div>Protocollato Integrazione</div>
       <div class="legend-item"><div class="legend-line" style="background:#3a8c5c"></div>Ottenuto</div>
@@ -145,15 +143,15 @@
 
 <script>
 const STATO_COLORS = {
-  'IN ATTESA':                    '#8892b0',
-  'IN REDAZIONE':                 '#e6b800',
-  'IN FIRMA RDS':                 '#ff7f2a',
-  'INVIATO':                      '#3399ff',
-  'PROTOCOLLATO':                 '#0055cc',
-  'NECESSARIA INTEGRAZIONE':      '#e60000',
-  'IN REDAZIONE INTEGRAZIONE':    '#e6b800',
-  'PROTOCOLLATO INTEGRAZIONE':    '#33aa55',
-  'OTTENUTO':                     '#00cc66',
+  'IN ATTESA':                    '#4a4f6a',
+  'IN REDAZIONE':                 '#4a4f6a',
+  'IN REDAZIONE INTEGRAZIONE':    '#4a4f6a',
+  'IN FIRMA RDS':                 '#e07b3a',
+  'INVIATO':                      '#4f8ef7',
+  'PROTOCOLLATO':                 '#4f8ef7',
+  'NECESSARIA INTEGRAZIONE':      '#cc3333',
+  'PROTOCOLLATO INTEGRAZIONE':    '#548235',
+  'OTTENUTO':                     '#3a8c5c',
 };
 
 const IMPRESE = { '1A':'Valtellina', '1B':'Soleto', '2A':'Sielte', '2B':'Telebit' };
