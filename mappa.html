@@ -105,6 +105,30 @@
     #map { width:100vw !important; }
     body { background:#fff; }
   }
+  @media (max-width: 768px) {
+    .topbar { padding:0 12px; height:46px; gap:8px; }
+    .page-title { display:none; }
+    .topbar-right .btn[onclick="exportPDF()"] { display:none; }
+    .divider-v { display:none; }
+    .logo { font-size:11px; }
+    .app-body { flex-direction:column; }
+    .sidebar {
+      width:100% !important;
+      height:220px;
+      border-left:none;
+      border-top:1px solid var(--border);
+      flex-direction:row;
+      overflow:hidden;
+    }
+    .sidebar-head { width:100%; padding:8px 12px; border-bottom:1px solid var(--border); border-right:none; }
+    .sidebar-body { display:flex; flex-direction:row; overflow-x:auto; overflow-y:hidden; }
+    .lotto-item { min-width:140px; border-bottom:none; border-right:1px solid #2e334718; padding:8px 12px; }
+    .legend { display:none; }
+    #map { flex:1; min-height:0; }
+    .leaflet-control-scale { margin-bottom:60px !important; }
+    .stats-bar { flex-wrap:wrap; gap:6px; padding:6px 10px; }
+    .stat-pill { font-size:10px; padding:3px 8px; }
+  }
 </style>
 </head>
 <body>
@@ -182,7 +206,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© OpenStreetMap'
 }).addTo(map);
 
-L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
+L.control.scale({ imperial: false, position: 'bottomright' }).addTo(map);
 
 function exportPDF() {
   const btn = document.querySelector('[onclick="exportPDF()"]');
