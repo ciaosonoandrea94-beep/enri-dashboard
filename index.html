@@ -113,7 +113,7 @@
   .delta-neu { color:var(--muted);font-size:10px;font-family:'DM Mono',monospace; }
   .bar-lotto { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted); width: 28px; text-align: right; flex-shrink: 0; }
   .bar-track { flex: 1; height: 28px; border-radius: 4px; overflow: hidden; display: flex; background: var(--surface2); cursor: pointer; }
-  .bar-seg { height: 100%; cursor: default; }
+  .bar-seg { height: 100%; cursor: pointer; }
   .bar-pct { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--muted); width: 38px; text-align: right; flex-shrink: 0; }
   .legend { display: flex; flex-wrap: wrap; gap: 10px; padding: 12px 18px; border-top: 1px solid var(--border); }
   .legend-item { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--muted); }
@@ -359,6 +359,7 @@ function renderCluster(clMap, clTot) {
     row.innerHTML = `<span class="bar-lotto">${cl}</span><div class="bar-track">${segsHtml}</div><span class="bar-pct">${pctLabel}</span><span style="min-width:72px;text-align:right;font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;flex-shrink:0">${fmt(tot)} m</span>`;
     row.style.cursor = 'default';
     row.querySelectorAll('.bar-seg').forEach(seg => {
+      seg.style.cursor = 'default';
       seg.addEventListener('mousemove', e => { tooltip.textContent = seg.getAttribute('data-tip'); tooltip.style.opacity = '1'; tooltip.style.left = (e.clientX+12)+'px'; tooltip.style.top = (e.clientY-28)+'px'; });
       seg.addEventListener('mouseleave', () => { tooltip.style.opacity = '0'; });
     });
