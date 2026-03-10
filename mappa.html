@@ -100,10 +100,22 @@
   .stat-pill { background:#0f1117cc; backdrop-filter:blur(8px); border:1px solid var(--border); border-radius:20px; padding:5px 14px; font-size:11px; display:flex; align-items:center; gap:6px; }
   .stat-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
   @media print {
-    .topbar-right .btn, .topbar-right button { display:none !important; }
-    .sidebar { display:none !important; }
-    #map { width:100vw !important; }
-    body { background:#fff; }
+    @page { size: A4 landscape; margin: 0; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { background: #0f1117 !important; margin: 0; }
+    .topbar { height: 32px !important; padding: 0 12px !important; }
+    .topbar-right button { display: none !important; }
+    .wrap { height: calc(100vh - 32px) !important; }
+    #map { flex: 1 !important; }
+    .sidebar { width: 220px !important; font-size: 10px !important; }
+    .lotto-item { padding: 6px 10px !important; }
+    .lotto-num { font-size: 11px !important; }
+    .lotto-impresa { font-size: 9px !important; }
+    .lotto-sub { font-size: 8px !important; }
+    .lotto-pct { font-size: 11px !important; }
+    .stats-bar { bottom: 8px !important; left: 8px !important; }
+    .stat-pill { font-size: 9px !important; padding: 3px 8px !important; }
+    .leaflet-control-zoom { display: none !important; }
   }
   @media (max-width: 768px) {
     .topbar { padding:0 12px; height:46px; gap:8px; }
@@ -210,179 +222,15 @@ L.control.scale({ imperial: false, position: 'bottomright' }).addTo(map);
 
 function exportPDF() {
   const btn = document.querySelector('[onclick="exportPDF()"]');
-  btn.textContent = '⏳ Generazione...';
+  btn.textContent = '⏳ Preparazione...';
   btn.disabled = true;
-
-  // Carica librerie se non presenti
-  function loadScript(src) {
-    return new Promise((res, rej) => {
-      if (document.querySelector(`script[src="${src}"]`)) { res(); return; }
-      const s = document.createElement('script');
-      s.src = src; s.onload = res; s.onerror = rej;
-      document.head.appendChild(s);
-    });
-  }
-
-  Promise.all([
-    loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'),
-    loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
-  ]).then(() => {
-    const mapEl = document.getElementById('map');
-    html2canvas(mapEl, {
-      useCORS: true,
-      allowTaint: true,
-      scale: 1.5,
-      backgroundColor: '#1a1f2e'
-    }).then(canvas => {
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-      const W = 297, H = 210;
-
-      // Sfondo scuro
-      pdf.setFillColor(15, 17, 23);
-      pdf.rect(0, 0, W, H, 'F');
-
-      // ── HEADER ──
-      pdf.setFillColor(26, 31, 46);
-      pdf.rect(0, 0, W, 14, 'F');
-      pdf.setTextColor(79, 142, 247);
-      pdf.setFontSize(7);
-      pdf.setFont('helvetica','bold');
-      pdf.text('PROGETTO · ENRI', 10, 9);
-      pdf.setTextColor(180, 190, 210);
-      pdf.setFont('helvetica','normal');
-      pdf.text('Avanzamento Progettazione — Mappa Tracciati', 52, 9);
-      const now = new Date();
-      const dateStr = now.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
-      pdf.setTextColor(100,110,130);
-      pdf.text('Esportato il ' + dateStr, W - 10, 9, { align:'right' });
-
-      // ── MAPPA ──
-      const mapImg = canvas.toDataURL('image/jpeg', 0.92);
-      const sideW = 62;
-      const mapX = 0, mapY = 14, mapW = W - sideW, mapH = H - 14;
-      pdf.addImage(mapImg, 'JPEG', mapX, mapY, mapW, mapH);
-
-      // ── SIDEBAR DESTRA ──
-      pdf.setFillColor(22, 27, 40);
-      pdf.rect(W - sideW, 14, sideW, H - 14, 'F');
-      pdf.setDrawColor(46, 51, 71);
-      pdf.setLineWidth(0.3);
-      pdf.line(W - sideW, 14, W - sideW, H);
-
-      // Titolo sidebar
-      pdf.setTextColor(100, 110, 140);
-      pdf.setFontSize(6);
-      pdf.setFont('helvetica','bold');
-      pdf.text('LOTTI', W - sideW + 4, 21);
-
-      // Stats globali
-      let totTotPdf = 0, totOttPdf = 0;
-      Object.values(stats).forEach(s => { totTotPdf += s.totale; totOttPdf += s.ottenuto; });
-      const pctGlob = totTotPdf > 0 ? (totOttPdf/totTotPdf*100).toFixed(1) : '0.0';
-      const kmGlob = (totTotPdf/1000).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,'.');
-
-      pdf.setFillColor(58, 140, 92, 0.15);
-      pdf.setDrawColor(58, 140, 92);
-      pdf.roundedRect(W - sideW + 4, 23, sideW - 8, 10, 1, 1, 'FD');
-      pdf.setTextColor(58, 140, 92);
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica','bold');
-      pdf.text(pctGlob + '%', W - sideW + 4 + (sideW-8)/2, 29.5, { align:'center' });
-      pdf.setFontSize(6);
-      pdf.setFont('helvetica','normal');
-      pdf.setTextColor(100,110,140);
-      pdf.text('Autorizzato · ' + kmGlob + ' km totali', W - sideW + 4 + (sideW-8)/2, 33, { align:'center' });
-
-      // Tabella lotti
-      let rowY = 38;
-      LOTTO_ORDER.forEach(id => {
-        const s = stats[id];
-        if (!s) return;
-        if (rowY > H - 30) return;
-        const p = s.pct.toFixed(1);
-        const km = (s.totale/1000).toFixed(1).replace('.',',');
-        const col = getColor(s.statoLabel);
-
-        // Barra colorata laterale
-        const rgb = hexToRgb(col);
-        pdf.setFillColor(rgb.r, rgb.g, rgb.b);
-        pdf.rect(W - sideW + 4, rowY, 2, 8, 'F');
-
-        // Nome lotto
-        pdf.setTextColor(220, 225, 235);
-        pdf.setFontSize(7.5);
-        pdf.setFont('helvetica','bold');
-        pdf.text('Lotto ' + id, W - sideW + 8, rowY + 5);
-
-        // Impresa
-        if (IMPRESE[id]) {
-          pdf.setTextColor(79, 142, 247);
-          pdf.setFontSize(6);
-          pdf.setFont('helvetica','normal');
-          pdf.text(IMPRESE[id], W - sideW + 8, rowY + 8.5);
-        }
-
-        // km
-        pdf.setTextColor(100, 110, 140);
-        pdf.setFontSize(6);
-        pdf.text(km + ' km', W - sideW + 8, rowY + (IMPRESE[id] ? 12 : 9));
-
-        // Percentuale
-        pdf.setTextColor(58, 140, 92);
-        pdf.setFontSize(8);
-        pdf.setFont('helvetica','bold');
-        pdf.text(p + '%', W - 6, rowY + 6, { align:'right' });
-
-        // Separatore
-        pdf.setDrawColor(40, 45, 60);
-        pdf.setLineWidth(0.2);
-        pdf.line(W - sideW + 4, rowY + (IMPRESE[id] ? 14 : 11), W - 4, rowY + (IMPRESE[id] ? 14 : 11));
-
-        rowY += IMPRESE[id] ? 15 : 12;
-      });
-
-      // ── LEGENDA ──
-      const legY = H - 26;
-      pdf.setFillColor(18, 22, 35);
-      pdf.rect(W - sideW, legY, sideW, H - legY, 'F');
-      pdf.setDrawColor(46, 51, 71);
-      pdf.line(W - sideW, legY, W, legY);
-
-      pdf.setTextColor(100, 110, 140);
-      pdf.setFontSize(5.5);
-      pdf.setFont('helvetica','bold');
-      pdf.text('STATO AUTORIZZAZIONE', W - sideW + 4, legY + 5);
-
-      const legItems = [
-        { color:'#4a4f6a', label:'In Attesa / Redazione' },
-        { color:'#e07b3a', label:'In Firma RDS' },
-        { color:'#4f8ef7', label:'Inviato / Protocollato' },
-        { color:'#cc3333', label:'Necessaria Integrazione' },
-        { color:'#548235', label:'Prot. Integrazione' },
-        { color:'#3a8c5c', label:'Ottenuto' },
-      ];
-      let lx = W - sideW + 4, ly = legY + 9;
-      legItems.forEach((it, i) => {
-        if (i === 3) { lx = W - sideW + 4 + (sideW-8)/2; ly = legY + 9; }
-        const rgb2 = hexToRgb(it.color);
-        pdf.setFillColor(rgb2.r, rgb2.g, rgb2.b);
-        pdf.rect(lx, ly - 2, 10, 2.5, 'F');
-        pdf.setTextColor(150, 160, 180);
-        pdf.setFont('helvetica','normal');
-        pdf.text(it.label, lx + 12, ly);
-        ly += 5.5;
-      });
-
-      pdf.save('ENRI_Mappa_' + dateStr.replace(/\//g,'-') + '.pdf');
-      btn.textContent = '⬇ Esporta PDF';
-      btn.disabled = false;
-    });
-  }).catch(() => {
-    alert('Errore nella generazione del PDF');
+  // Forza ridisegno mappa prima di stampare
+  map.invalidateSize();
+  setTimeout(() => {
+    window.print();
     btn.textContent = '⬇ Esporta PDF';
     btn.disabled = false;
-  });
+  }, 500);
 }
 
 function hexToRgb(hex) {
