@@ -31,32 +31,38 @@
   #loadingScreen { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 100; }
   .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
   @media print {
-    @page { size: A4 landscape; margin: 8mm; }
+    @page { size: A4 landscape; margin: 6mm; }
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-    body { background: #0f1117 !important; color: #e8eaf0 !important; font-size: 11px !important; }
-    .topbar { height: 36px !important; padding: 0 14px !important; }
-    .topbar img { height: 20px !important; }
+    html, body { height: auto !important; overflow: visible !important; }
+    body { background: #0f1117 !important; color: #e8eaf0 !important; font-size: 10px !important; }
+    .topbar { height: 32px !important; padding: 0 12px !important; flex-shrink: 0; }
+    .topbar img { height: 18px !important; }
     .topbar-right .btn, .topbar-right a { display: none !important; }
     #loadingBar, #loadingScreen, #errorBox { display: none !important; }
-    .main { padding: 6px 10px !important; gap: 8px !important; }
-    .kpi-row { gap: 6px !important; }
-    .kpi { padding: 8px 10px !important; }
-    .kpi-value { font-size: 18px !important; }
-    .kpi-label { font-size: 8px !important; margin-bottom: 4px !important; }
-    .kpi-sub { font-size: 9px !important; margin-top: 2px !important; }    .grid-main { grid-template-columns: 1fr 240px !important; gap: 8px !important; }
-    .card { break-inside: avoid; }
-    .card-body { padding: 6px 10px !important; }
-    .bar-row { min-height: 24px !important; margin-bottom: 3px !important; }
-    .bar-track { height: 16px !important; }
-    .bar-ms { min-width: 56px !important; padding: 1px 4px !important; }
-    .bar-ms-val { font-size: 9px !important; }
-    .bar-ms-label { font-size: 7px !important; }
-    .bar-ms-wrap { padding: 3px 6px !important; }
-    .bar-ms-wrap-header { font-size: 7px !important; }
-    .legend { padding: 4px 10px !important; gap: 8px !important; flex-wrap: wrap; }
-    .legend-item { font-size: 9px !important; }
-    .side .card { break-inside: avoid; }
-    canvas { width: 140px !important; height: 140px !important; }
+    .main { padding: 4px 8px !important; gap: 6px !important; overflow: visible !important; height: auto !important; }
+    .kpi-row { gap: 5px !important; }
+    .kpi { padding: 6px 8px !important; }
+    .kpi-value { font-size: 16px !important; }
+    .kpi-label { font-size: 7px !important; margin-bottom: 2px !important; }
+    .kpi-sub { font-size: 8px !important; margin-top: 1px !important; }
+    .grid-main { grid-template-columns: 1fr 220px !important; gap: 6px !important; }
+    .card { break-inside: avoid !important; overflow: visible !important; }
+    .card-body { padding: 4px 8px !important; max-height: none !important; overflow: visible !important; }
+    .bar-row { min-height: 20px !important; margin-bottom: 2px !important; }
+    .bar-track { height: 14px !important; }
+    .bar-ms { min-width: 48px !important; padding: 1px 3px !important; }
+    .bar-ms-val { font-size: 8px !important; }
+    .bar-ms-label { font-size: 6px !important; }
+    .bar-ms-wrap { padding: 2px 4px !important; }
+    .bar-ms-wrap-header { font-size: 6px !important; }
+    .legend { padding: 3px 8px !important; gap: 6px !important; flex-wrap: wrap; }
+    .legend-item { font-size: 8px !important; }
+    .side .card { break-inside: avoid !important; }
+    canvas { max-width: 160px !important; max-height: 160px !important; }
+    /* Nasconde sezione cluster per evitare pagina extra */
+    #clusterWrap, #clusterWrap ~ *, .card:has(#clusterWrap) { display: none !important; }
+    /* Forza tutto su una pagina */
+    .grid-main, .kpi-row, .main > * { break-inside: avoid !important; break-before: avoid !important; }
   }
   .main { padding: 20px 28px; display: flex; flex-direction: column; gap: 18px; }
   .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
