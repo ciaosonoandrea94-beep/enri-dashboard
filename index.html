@@ -12,7 +12,7 @@
     --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a; --border: #2e3347;
     --accent: #4f8ef7; --text: #e8eaf0; --muted: #6b7080;
     --attesa: #4a4f6a; --redazione: #c9a227; --firma: #e07b3a;
-    --inviato: #4f8ef7; --protocollato: #2f5496; --ottenuto: #3a8c5c;
+    --inviato: #4f8ef7; --protocollato: #4f8ef7; --ottenuto: #3a8c5c;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
@@ -59,7 +59,7 @@
     canvas { width: 140px !important; height: 140px !important; }
   }
   .main { padding: 20px 28px; display: flex; flex-direction: column; gap: 18px; }
-  .kpi-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; }
+  .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
   .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; position: relative; overflow: hidden; }
   .kpi::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
   .kpi.attesa::before { background: var(--attesa); }
@@ -154,18 +154,18 @@
   .ms-card.warn .ms-days { color: #c9a227; }
   .ms-card.danger .ms-days { color: #cc3333; }
   .ms-card.future .ms-days { color: #4f8ef7; }
-  .bar-ms-wrap { display: flex; flex-direction: column; flex-shrink: 0; gap: 4px; background: #181c2a; border-radius: 8px; padding: 6px 10px; border: 1px solid #2e3347; }
+  .bar-ms-wrap { display: flex; flex-direction: column; flex-shrink: 0; gap: 0; background: #181c2a; border-radius: 8px; padding: 6px 10px; border: 1px solid #2e3347; width: 252px; }
   .bar-ms-wrap-header { font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #8090b0; text-align: center; padding-bottom: 4px; border-bottom: 1px solid #2e3347; }
-  .bar-ms-cols { display: flex; gap: 4px; }
-  .bar-ms { min-width: 68px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; cursor: default; border-radius: 5px; padding: 4px 6px; border-left: 2px solid transparent; }
-  .bar-ms.ms-invio   { border-left-color: #3a7a4a; }
-  .bar-ms.ms-parziale{ border-left-color: #8a7a20; }
-  .bar-ms.ms-finale  { border-left-color: #3a4a8a; }
-  .bar-ms-label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px; }
-  .bar-ms.ms-invio    .bar-ms-label { color: #3a7a4a; }
-  .bar-ms.ms-parziale .bar-ms-label { color: #8a7a20; }
-  .bar-ms.ms-finale   .bar-ms-label { color: #3a4a8a; }
-  .bar-ms-val { font-size: 12px; font-weight: 700; font-family: 'DM Mono', monospace; }
+  .bar-ms-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .bar-ms { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; cursor: default; border-radius: 6px; padding: 5px 4px; border: 1px solid transparent; }
+  .bar-ms.ms-invio    { border-color: #3a7a4a55; background: #3a7a4a18; }
+  .bar-ms.ms-parziale { border-color: #c9a22755; background: #c9a22718; }
+  .bar-ms.ms-finale   { border-color: #4f8ef755; background: #4f8ef718; }
+  .bar-ms-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 3px; text-align: center; white-space: nowrap; }
+  .bar-ms.ms-invio    .bar-ms-label { color: #4aaa6a; }
+  .bar-ms.ms-parziale .bar-ms-label { color: #c9a227; }
+  .bar-ms.ms-finale   .bar-ms-label { color: #6aabf7; }
+  .bar-ms-val { font-size: 13px; font-weight: 700; font-family: 'DM Mono', monospace; }
 
   /* ── RESPONSIVE MOBILE ── */
   @media (max-width: 768px) {
@@ -237,8 +237,7 @@
   <div class="kpi-row">
     <div class="kpi attesa"><div class="kpi-label">In Attesa / Redazione</div><div class="kpi-value" id="kpi-attesa">—</div><div class="kpi-sub" id="kpisub-attesa">—</div></div>
     <div class="kpi firma"><div class="kpi-label">In Firma RDS</div><div class="kpi-value" id="kpi-firma">—</div><div class="kpi-sub" id="kpisub-firma">—</div></div>
-    <div class="kpi inviato"><div class="kpi-label">Inviato</div><div class="kpi-value" id="kpi-inviato">—</div><div class="kpi-sub" id="kpisub-inviato">—</div></div>
-    <div class="kpi protocollato"><div class="kpi-label">Protocollato</div><div class="kpi-value" id="kpi-protocollato">—</div><div class="kpi-sub" id="kpisub-protocollato">—</div></div>
+    <div class="kpi inviato"><div class="kpi-label">Inviato / Protocollato</div><div class="kpi-value" id="kpi-inviato">—</div><div class="kpi-sub" id="kpisub-inviato">—</div></div>
     <div class="kpi integrazione"><div class="kpi-label">Necessaria Integrazione</div><div class="kpi-value" id="kpi-integrazione">—</div><div class="kpi-sub" id="kpisub-integrazione">—</div></div>
     <div class="kpi protint"><div class="kpi-label">Protocollato Integrazione</div><div class="kpi-value" id="kpi-protint">—</div><div class="kpi-sub" id="kpisub-protint">—</div></div>
     <div class="kpi ottenuto"><div class="kpi-label">🏆 Autorizzati</div><div class="kpi-value" id="kpi-ottenuto">—</div><div class="kpi-sub" id="kpisub-ottenuto">—</div></div>
@@ -250,16 +249,16 @@
         <span style="font-size:14px;font-weight:600;font-family:'DM Mono',monospace;color:var(--text)" id="totaleMetri">—</span>
       </div>
       <div class="card-body">
-        <div class="bar-row" style="margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--border)">
-          <span class="bar-lotto"></span>
+        <div class="bar-row" style="margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--border);align-items:flex-end">
+          <div style="width:90px;flex-shrink:0"></div>
           <div style="flex:1"></div>
-          <span class="bar-pct"></span>
-          <div class="bar-ms-wrap">
+          <div style="width:38px;flex-shrink:0"></div>
+          <div class="bar-ms-wrap" style="background:transparent;border-color:transparent;padding-bottom:0">
             <div class="bar-ms-wrap-header">📅 Milestone</div>
             <div class="bar-ms-cols">
-              <div class="bar-ms ms-invio"><span class="bar-ms-label">Invio Permessi</span></div>
-              <div class="bar-ms ms-parziale"><span class="bar-ms-label">Parziale</span></div>
-              <div class="bar-ms ms-finale"><span class="bar-ms-label">Finale</span></div>
+              <div class="bar-ms ms-invio"    style="background:transparent;border:none"><span class="bar-ms-label">Invio Perm.</span></div>
+              <div class="bar-ms ms-parziale" style="background:transparent;border:none"><span class="bar-ms-label">Parziale 50/90%</span></div>
+              <div class="bar-ms ms-finale"   style="background:transparent;border:none"><span class="bar-ms-label">Finale 100%</span></div>
             </div>
           </div>
         </div>
@@ -268,8 +267,7 @@
       <div class="legend">
         <div class="legend-item"><div class="legend-dot" style="background:#4a4f6a"></div>In Attesa / Redazione</div>
         <div class="legend-item"><div class="legend-dot" style="background:#e07b3a"></div>In Firma RDS</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#4f8ef7"></div>Inviato</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#2f5496"></div>Protocollato</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#4f8ef7"></div>Inviato / Protocollato</div>
         <div class="legend-item"><div class="legend-dot" style="background:#cc3333"></div>Necessaria Integrazione</div>
         <div class="legend-item"><div class="legend-dot" style="background:#548235"></div>Protocollato Integrazione</div>
         <div class="legend-item"><div class="legend-dot" style="background:#3a8c5c"></div>Ottenuto</div>
@@ -313,8 +311,7 @@
     <div class="legend">
       <div class="legend-item"><div class="legend-dot" style="background:#4a4f6a"></div>In Attesa / Redazione</div>
       <div class="legend-item"><div class="legend-dot" style="background:#e07b3a"></div>In Firma RDS</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#4f8ef7"></div>Inviato</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#2f5496"></div>Protocollato</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#4f8ef7"></div>Inviato / Protocollato</div>
       <div class="legend-item"><div class="legend-dot" style="background:#cc3333"></div>Necessaria Integrazione</div>
       <div class="legend-item"><div class="legend-dot" style="background:#548235"></div>Protocollato Integrazione</div>
       <div class="legend-item"><div class="legend-dot" style="background:#3a8c5c"></div>Ottenuto</div>
@@ -328,12 +325,43 @@ const COLORS = {
   'IN REDAZIONE':               '#4a4f6a',
   'IN FIRMA RDS':               '#e07b3a',
   'INVIATO':                    '#4f8ef7',
-  'PROTOCOLLATO':               '#2f5496',
+  'PROTOCOLLATO':               '#4f8ef7',
   'NECESSARIA INTEGRAZIONE':    '#cc3333',
   'IN REDAZIONE INTEGRAZIONE':  '#4a4f6a',
   'PROTOCOLLATO INTEGRAZIONE':  '#548235',
   'OTTENUTO':                   '#3a8c5c'
 };
+
+// Gruppi visivi per le barre — gli stati vengono accorpati prima del rendering
+const STATI_GRUPPI = [
+  { label: 'In Attesa / Redazione', stati: ['IN ATTESA','IN REDAZIONE','IN REDAZIONE INTEGRAZIONE'], color: '#4a4f6a' },
+  { label: 'In Firma RDS',          stati: ['IN FIRMA RDS'],                                         color: '#e07b3a' },
+  { label: 'Inviato / Protocollato',stati: ['INVIATO','PROTOCOLLATO'],                               color: '#4f8ef7' },
+  { label: 'Necessaria Integrazione',stati: ['NECESSARIA INTEGRAZIONE'],                             color: '#cc3333' },
+  { label: 'Protocollato Integrazione',stati: ['PROTOCOLLATO INTEGRAZIONE'],                        color: '#548235' },
+  { label: 'Ottenuto',              stati: ['OTTENUTO'],                                             color: '#3a8c5c' },
+];
+
+function buildGruppiMap(statiMap) {
+  // Converte una mappa {STATO: metri} in {GRUPPO_LABEL: metri} per il rendering barre
+  const out = {};
+  STATI_GRUPPI.forEach(g => {
+    const tot = g.stati.reduce((s, st) => s + (statiMap[st] || 0), 0);
+    if (tot > 0) out[g.label] = tot;
+  });
+  return out;
+}
+
+function renderBarre(gruppiMap, totale, tooltip, onHover) {
+  let html = '';
+  STATI_GRUPPI.forEach(g => {
+    const m = gruppiMap[g.label] || 0;
+    if (m <= 0) return;
+    const pct = totale > 0 ? m / totale * 100 : 0;
+    html += `<div class="bar-seg" style="width:${pct}%;background:${g.color}" data-tip="${g.label}: ${pct.toFixed(1)}% (${fmt(m)} m)"></div>`;
+  });
+  return html;
+}
 const CSV_URL = 'dati.csv';
 const RIEPILOGO_URL = 'riepilogo.csv';
 
@@ -408,13 +436,8 @@ function renderCluster(clMap, clTot) {
     const tot = clTot[cl];
     const ottenutoPct = tot > 0 ? (clMap[cl]['OTTENUTO'] || 0) / tot * 100 : 0;
     const pctLabel = ottenutoPct > 0 ? ottenutoPct.toFixed(0) + '%' : '—';
-    let segsHtml = '';
-    STATI.forEach(stato => {
-      const m = clMap[cl][stato] || 0;
-      if (m <= 0) return;
-      const pct = tot > 0 ? m / tot * 100 : 0;
-      segsHtml += `<div class="bar-seg" style="width:${pct}%;background:${COLORS[stato]}" data-tip="${stato}: ${pct.toFixed(1)}% (${fmt(m)} m)"></div>`;
-    });
+    const gruppi = buildGruppiMap(clMap[cl]);
+    const segsHtml = renderBarre(gruppi, tot, tooltip);
     const row = document.createElement('div');
     row.className = 'bar-row';
     row.innerHTML = `<span class="bar-lotto">${cl}</span><div class="bar-track">${segsHtml}</div><span class="bar-pct">${pctLabel}</span><span style="min-width:72px;text-align:right;font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;flex-shrink:0">${fmt(tot)} m</span>`;
@@ -482,16 +505,15 @@ function openModal(lotto, statiMetri, totale) {
     </div>` : ''}
   `;
 
-  // Barre per ogni stato con delta
-  STATI.forEach(stato => {
-    const m = statiMetri[stato] || 0;
+  // Barre per gruppo con delta
+  STATI_GRUPPI.forEach(g => {
+    const m = g.stati.reduce((s, st) => s + (statiMetri[st] || 0), 0);
     if (!m) return;
     const pct = totale > 0 ? m/totale*100 : 0;
-    const col = COLORS[stato];
 
     let deltaHtml = '';
     if (prevLotto !== null) {
-      const prevM = prevLotto[stato] || 0;
+      const prevM = g.stati.reduce((s, st) => s + (prevLotto[st] || 0), 0);
       const diff = m - prevM;
       if (diff > 0) deltaHtml = `<span class="delta-pos">▲ +${fmt(diff)} m</span>`;
       else if (diff < 0) deltaHtml = `<span class="delta-neg">▼ ${fmt(Math.abs(diff))} m</span>`;
@@ -500,9 +522,9 @@ function openModal(lotto, statiMetri, totale) {
 
     body.innerHTML += `
       <div class="modal-bar-row">
-        <span class="modal-bar-label">${stato}</span>
-        <div class="modal-bar-track"><div class="modal-bar-fill" style="width:${pct}%;background:${col}"></div></div>
-        <span class="modal-bar-val" style="color:${col}">${fmt(m)} m ${deltaHtml}</span>
+        <span class="modal-bar-label">${g.label}</span>
+        <div class="modal-bar-track"><div class="modal-bar-fill" style="width:${pct}%;background:${g.color}"></div></div>
+        <span class="modal-bar-val" style="color:${g.color}">${fmt(m)} m ${deltaHtml}</span>
       </div>`;
   });
 
@@ -709,11 +731,13 @@ function getMilestonesHtml(lotto) {
   const labelsFixed = lista.length === 2 ? ['Invio', '—', '100%'] : labels;
 
   const classi = ['ms-invio', 'ms-parziale', 'ms-finale'];
+  const labelsShort = lista.length === 2 ? ['Invio', '—', 'Finale'] : ['Invio', lista[1]?.titolo?.includes('90') ? '90%' : '50%', 'Finale'];
   return '<div class="bar-ms-wrap"><div class="bar-ms-cols">' + items.map((ms, i) => {
     if (!ms) return `<div class="bar-ms ${classi[i]}"><span class="bar-ms-val" style="color:var(--muted)">—</span></div>`;
     const { colore, label } = getMilestoneCountdown(ms.data);
-    const tip = `[${ms.num}] ${ms.titolo} — ${new Date(ms.data).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'})}`;
-    return `<div class="bar-ms ${classi[i]}" data-ms-tip="${tip}"><span class="bar-ms-val" style="color:${colore}">${label}</span></div>`;
+    const dataFmt = new Date(ms.data).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
+    const tip = `[${ms.num}] ${ms.titolo} — ${dataFmt}`;
+    return `<div class="bar-ms ${classi[i]}" data-ms-tip="${tip}" title="${tip}"><span class="bar-ms-val" style="color:${colore}">${label}</span><span style="font-size:8px;color:var(--muted);margin-top:1px">${dataFmt}</span></div>`;
   }).join('') + '</div></div>';
 }
 
@@ -741,8 +765,7 @@ function renderDashboard(data, prevSnapshot=null) {
   const kpiMap={
     attesa:       ['IN ATTESA','IN REDAZIONE','IN REDAZIONE INTEGRAZIONE'],
     firma:        ['IN FIRMA RDS'],
-    inviato:      ['INVIATO'],
-    protocollato: ['PROTOCOLLATO'],
+    inviato:      ['INVIATO', 'PROTOCOLLATO'],
     integrazione: ['NECESSARIA INTEGRAZIONE'],
     protint:      ['PROTOCOLLATO INTEGRAZIONE'],
     ottenuto:     ['OTTENUTO']
@@ -802,13 +825,8 @@ function renderDashboard(data, prevSnapshot=null) {
     const tot=lottiTotale[lotto];
     const ottenutoPct=tot>0?(lottiMap[lotto]['OTTENUTO']||0)/tot*100:0;
     const pctLabel = ottenutoPct>0 ? ottenutoPct.toFixed(0)+'%' : '—';
-    let segsHtml='';
-    STATI.forEach(stato=>{
-      const m=lottiMap[lotto][stato]||0;
-      if(m<=0)return;
-      const pct=tot>0?m/tot*100:0;
-      segsHtml+=`<div class="bar-seg" style="width:${pct}%;background:${COLORS[stato]}" data-tip="${stato}: ${pct.toFixed(1)}% (${fmt(m)} m)"></div>`;
-    });
+    const gruppi = buildGruppiMap(lottiMap[lotto]);
+    const segsHtml = renderBarre(gruppi, tot, tooltip);
     const row=document.createElement('div');
     row.className='bar-row';
     row.style.cursor = 'pointer';
