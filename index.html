@@ -695,18 +695,30 @@ async function loadData(saveSnapshot = false) {
     // Salva nuovo snapshot SOLO se i dati sono cambiati rispetto allo snapshot precedente
     const dataHash = JSON.stringify(data.map(r=>`${r.lotto}|${r.stato}|${r.metri}`).sort());
     const prevHash = prevSnapshot ? JSON.stringify(prevSnapshot.data.map(r=>`${r.lotto}|${r.stato}|${r.metri}`).sort()) : null;
-    if (dataHash !== prevHash) {
+    const dataChanged = dataHash !== prevHash;
+
+    if (dataChanged) {
+      // Prima di sovrascrivere, salva lo snapshot attuale come "precedente"
+      if (prevSnapshot) {
+        try { localStorage.setItem('enri_snapshot_prev', JSON.stringify(prevSnapshot)); } catch(e) {}
+      }
       const newSnapshot = { data: data, ts: new Date().toISOString() };
       try { localStorage.setItem('enri_snapshot', JSON.stringify(newSnapshot)); } catch(e) {}
     }
 
-    // Salva snapshot PRECEDENTE in variabile globale per uso nel modal
-    // (lo snapshot in localStorage è già stato sovrascritto con i dati nuovi)
-    window._prevSnapshotData = (prevSnapshot && dataHash !== prevHash) ? prevSnapshot.data : null;
+    // Carica sempre lo snapshot precedente per il modal
+    let prevSnapshotForModal = null;
+    try {
+      const rawPrev = localStorage.getItem('enri_snapshot_prev');
+      if (rawPrev) prevSnapshotForModal = JSON.parse(rawPrev);
+    } catch(e) {}
+
+    // Salva in variabile globale per uso nel modal
+    window._prevSnapshotData = prevSnapshotForModal ? prevSnapshotForModal.data : null;
 
     setLoading(100);
-    // Confronta dati attuali con snapshot per decidere se mostrare delta
-    const hasDiff = prevSnapshot && dataHash !== prevHash;
+    // Confronta dati attuali con snapshot per decidere se mostrare delta nelle KPI
+    const hasDiff = dataChanged && prevSnapshot !== null;
     renderDashboard(data, hasDiff ? prevSnapshot : null);
 
     const oggi = new Date().toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
