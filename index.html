@@ -521,15 +521,12 @@ function openModal(lotto, statiMetri, totale) {
   // Recupera snapshot precedente per delta
   let prevLotto = null;
   try {
-    const raw = localStorage.getItem('enri_snapshot');
-    if (raw) {
-      const snap = JSON.parse(raw);
-      if (snap.data) {
-        prevLotto = {};
-        snap.data.filter(r => r.lotto === lotto).forEach(r => {
-          prevLotto[r.stato] = (prevLotto[r.stato]||0) + r.metri;
-        });
-      }
+    const prevData = window._prevSnapshotData;
+    if (prevData) {
+      prevLotto = {};
+      prevData.filter(r => r.lotto === lotto).forEach(r => {
+        prevLotto[r.stato] = (prevLotto[r.stato]||0) + r.metri;
+      });
     }
   } catch(e) {}
 
@@ -702,6 +699,10 @@ async function loadData(saveSnapshot = false) {
       const newSnapshot = { data: data, ts: new Date().toISOString() };
       try { localStorage.setItem('enri_snapshot', JSON.stringify(newSnapshot)); } catch(e) {}
     }
+
+    // Salva snapshot PRECEDENTE in variabile globale per uso nel modal
+    // (lo snapshot in localStorage è già stato sovrascritto con i dati nuovi)
+    window._prevSnapshotData = (prevSnapshot && dataHash !== prevHash) ? prevSnapshot.data : null;
 
     setLoading(100);
     // Confronta dati attuali con snapshot per decidere se mostrare delta
