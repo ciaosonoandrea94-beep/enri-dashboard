@@ -190,8 +190,8 @@
     <span class="badge" id="statusBadge">⏳ Caricamento</span>
     <a href="mappa.html" style="font-size:11px;padding:5px 14px;border-radius:5px;background:var(--surface2);color:var(--text);border:1px solid var(--border);cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;text-decoration:none;transition:opacity 0.2s" onmouseover="this.style.opacity=0.75" onmouseout="this.style.opacity=1">🗺 Mappa</a>
     <button class="btn" onclick="loadData()">↻ Aggiorna</button>
-    <button class="btn" style="background:#2f5496" onclick="stampaLotti()">🖨 Lotti</button>
-    <button class="btn" style="background:#1a5c3a" onclick="stampaCluster()">🖨 Cluster</button>
+    <button class="btn" style="background:#2f5496" onclick="stampaLotti()">⬇ PDF Lotti</button>
+    <button class="btn" style="background:#1a5c3a" onclick="stampaCluster()">⬇ PDF Cluster</button>
   </div>
 </div>
 
@@ -334,7 +334,7 @@ function renderBarre(gruppiMap, totale, tooltip, onHover) {
     if (m <= 0) return;
     const pct = totale > 0 ? m / totale * 100 : 0;
     // Mostra % solo se il segmento è abbastanza largo (>6%)
-    const label = pct >= 6 ? `<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.7);pointer-events:none;font-family:'DM Mono',monospace">${pct.toFixed(0)}%</span>` : '';
+    const label = pct >= 6 ? `<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:500;color:rgba(255,255,255,0.75);text-shadow:0 1px 2px rgba(0,0,0,0.6);pointer-events:none;font-family:'DM Mono',monospace">${pct.toFixed(0)}%</span>` : '';
     html += `<div class="bar-seg" style="width:${pct}%;background:${g.color};position:relative" data-tip="${g.label}: ${pct.toFixed(1)}% (${fmt(m)} m)">${label}</div>`;
   });
   return html;
@@ -614,12 +614,50 @@ function stampaLotti() {
   style.textContent = `
     @media print {
       @page { size: A4 landscape; margin: 0; }
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-      body { background: #0f1117 !important; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box !important; }
+      html, body { width: 297mm !important; height: 210mm !important; overflow: hidden !important; margin: 0 !important; padding: 0 !important; background: #0f1117 !important; }
       #clusterSection { display: none !important; }
       #msLegendBar { display: none !important; }
       #loadingBar, #loadingScreen, #errorBox { display: none !important; }
       .topbar-right .btn, .topbar-right a { display: none !important; }
+      .topbar { height: 24px !important; padding: 0 10px !important; }
+      .topbar img { height: 14px !important; }
+      .logo { font-size: 10px !important; }
+      .page-title { font-size: 10px !important; }
+      .badge { font-size: 7px !important; }
+      #lastUpdate span { font-size: 7px !important; }
+      .main { padding: 3px 8px !important; gap: 3px !important; height: calc(210mm - 24px) !important; overflow: hidden !important; display: flex !important; flex-direction: column !important; }
+      .kpi-row { gap: 3px !important; }
+      .kpi { padding: 3px 8px !important; }
+      .kpi::before { height: 1px !important; }
+      .kpi-value { font-size: 13px !important; line-height: 1 !important; }
+      .kpi-label { font-size: 5.5px !important; margin-bottom: 1px !important; letter-spacing: 0 !important; }
+      .kpi-sub { font-size: 6px !important; margin-top: 0 !important; }
+      .grid-main { flex: 1 !important; min-height: 0 !important; grid-template-columns: 1fr 185px !important; gap: 4px !important; overflow: hidden !important; }
+      .card { border-radius: 4px !important; overflow: hidden !important; }
+      .card-header { padding: 2px 8px !important; min-height: 0 !important; }
+      .card-title { font-size: 8px !important; }
+      .card-body { padding: 2px 6px !important; overflow: hidden !important; }
+      .chart-wrap { gap: 0 !important; }
+      .bar-row { min-height: 13px !important; height: 13px !important; margin-bottom: 1px !important; align-items: center !important; }
+      .bar-track { height: 10px !important; }
+      .bar-lotto-label { font-size: 9px !important; line-height: 1 !important; }
+      .bar-lotto-name { font-size: 6px !important; line-height: 1 !important; }
+      .bar-lotto-comuni { display: none !important; }
+      .bar-left { width: 68px !important; min-width: 68px !important; }
+      .bar-ms-wrap { padding: 1px 2px !important; min-width: 40px !important; }
+      .bar-ms-val { font-size: 6.5px !important; line-height: 1 !important; }
+      .bar-ms-label { display: none !important; }
+      .bar-ms-wrap-header { font-size: 5px !important; padding: 1px 4px !important; }
+      .bar-separator { margin: 1px 0 !important; }
+      .bar-separator span { font-size: 6px !important; padding: 1px 5px !important; }
+      .bar-pct { font-size: 8px !important; width: 30px !important; }
+      .legend { padding: 2px 6px !important; gap: 5px !important; }
+      .legend-item { font-size: 6.5px !important; }
+      .side { gap: 3px !important; }
+      #lottiTable td, #lottiTable th { font-size: 7px !important; padding: 1px 3px !important; }
+      canvas { max-width: 110px !important; max-height: 110px !important; }
+      #donutLegend { font-size: 6.5px !important; gap: 1px !important; }
     }
   `;
   document.head.appendChild(style);
@@ -632,21 +670,50 @@ function stampaCluster() {
   style.textContent = `
     @media print {
       @page { size: A4 landscape; margin: 0; }
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-      body { background: #0f1117 !important; }
-      .kpi-row { display: none !important; }
-      .grid-main { display: none !important; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box !important; }
+      html, body { width: 297mm !important; height: 210mm !important; overflow: hidden !important; margin: 0 !important; padding: 0 !important; background: #0f1117 !important; }
       #msLegendBar { display: none !important; }
       #loadingBar, #loadingScreen, #errorBox { display: none !important; }
       .topbar-right .btn, .topbar-right a { display: none !important; }
-      #clusterSection {
-        display: block !important;
-        padding: 20px !important;
-      }
+      .topbar { height: 24px !important; padding: 0 10px !important; }
+      .topbar img { height: 14px !important; }
+      .logo { font-size: 10px !important; }
+      .page-title { font-size: 10px !important; }
+      .badge { font-size: 7px !important; }
+      #lastUpdate span { font-size: 7px !important; }
+      .main { padding: 3px 8px !important; gap: 4px !important; height: calc(210mm - 24px) !important; overflow: hidden !important; display: flex !important; flex-direction: column !important; }
+      /* Nascondi lotti, mostra cluster + KPI */
+      .grid-main { display: none !important; }
+      .kpi-row { gap: 3px !important; }
+      .kpi { padding: 3px 8px !important; }
+      .kpi::before { height: 1px !important; }
+      .kpi-value { font-size: 13px !important; line-height: 1 !important; }
+      .kpi-label { font-size: 5.5px !important; margin-bottom: 1px !important; letter-spacing: 0 !important; }
+      .kpi-sub { font-size: 6px !important; margin-top: 0 !important; }
+      #clusterSection { display: block !important; flex: 1 !important; overflow: hidden !important; }
+      #clusterSection .card { height: 100% !important; }
+      #clusterSection .card-body { overflow: hidden !important; }
+      #clusterSection .bar-ms-wrap { display: none !important; }
+      #clusterSection .legend { padding: 4px 8px !important; gap: 8px !important; }
+      #clusterSection .legend-item { font-size: 8px !important; }
+      #clusterSection .bar-row { min-height: 18px !important; margin-bottom: 2px !important; }
+      #clusterSection .bar-track { height: 14px !important; }
+      #clusterSection .bar-lotto-label { font-size: 11px !important; }
+      #clusterSection .bar-pct { font-size: 10px !important; }
     }
   `;
   document.head.appendChild(style);
-  setTimeout(() => { window.print(); document.head.removeChild(style); }, 300);
+  // Sposta temporaneamente cluster dentro .main
+  const clusterSection = document.getElementById('clusterSection');
+  const main = document.querySelector('.main');
+  const clusterParent = clusterSection.parentNode;
+  const clusterNext = clusterSection.nextSibling;
+  main.appendChild(clusterSection);
+  setTimeout(() => {
+    window.print();
+    clusterParent.insertBefore(clusterSection, clusterNext);
+    document.head.removeChild(style);
+  }, 400);
 }
 
 async function loadData(saveSnapshot = false) {
