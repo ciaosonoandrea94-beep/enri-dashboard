@@ -47,8 +47,9 @@
     .divider-v { height: 10px !important; margin: 0 4px !important; }
     .badge { font-size: 7px !important; padding: 1px 5px !important; }
     #lastUpdate span { font-size: 7px !important; }
-    /* Main */
-    .main { padding: 2px 5px !important; gap: 2px !important; height: calc(210mm - 20px) !important; overflow: hidden !important; }
+    /* Main - lascia spazio per cluster in fondo */
+    .main { padding: 2px 5px !important; gap: 2px !important; height: calc(210mm - 20px) !important; overflow: hidden !important; display: flex !important; flex-direction: column !important; }
+    .grid-main { flex: 1 !important; min-height: 0 !important; overflow: hidden !important; }
     /* KPI */
     .kpi-row { gap: 2px !important; }
     .kpi { padding: 2px 5px !important; border-radius: 4px !important; }
@@ -81,8 +82,21 @@
     .legend { padding: 2px 5px !important; gap: 4px !important; flex-wrap: wrap; }
     .legend-item { font-size: 6px !important; gap: 3px !important; }
     .legend-dot { width: 5px !important; height: 5px !important; }
-    /* Side */
-    .side { gap: 2px !important; }
+    /* Cluster - striscia compatta in fondo */
+    #clusterSection { display: block !important; padding: 0 5px 2px !important; }
+    #clusterSection .card { border-radius: 3px !important; }
+    #clusterSection .card-header { padding: 1px 5px !important; }
+    #clusterSection .card-title { font-size: 6.5px !important; }
+    #clusterSection #clusterStatus { font-size: 7px !important; }
+    #clusterSection .chart-wrap { gap: 0 !important; }
+    #clusterSection .bar-row { min-height: 9px !important; height: 9px !important; margin-bottom: 0px !important; }
+    #clusterSection .bar-track { height: 7px !important; }
+    #clusterSection .bar-lotto-label { font-size: 7px !important; width: 12px !important; }
+    #clusterSection .bar-lotto-name { display: none !important; }
+    #clusterSection .bar-pct { font-size: 6px !important; width: 22px !important; }
+    #clusterSection .bar-left { width: 18px !important; }
+    #clusterSection .legend { display: none !important; }
+    #clusterSection .bar-ms-wrap { display: none !important; }
     .side .card-body { padding: 1px 5px !important; }
     #lottiTable td, #lottiTable th { font-size: 6.5px !important; padding: 1px 3px !important; }
     canvas { max-width: 100px !important; max-height: 100px !important; }
