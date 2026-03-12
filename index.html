@@ -611,16 +611,18 @@ function openModal(lotto, statiMetri, totale) {
   const msDiv = document.getElementById('modalMs');
   msDiv.innerHTML = '';
   if (lista) {
-    const labels = ['Invio Permessi', lista.length===3?(lista[1].titolo.includes('90')?'Parziale 90%':'Parziale 50%'):'—', 'Finale 100%'];
+    // Usa sempre il titolo della milestone come label
     const items = lista.length===2 ? [lista[0], null, lista[1]] : lista;
+    const fallbackLabels = ['Invio Permessi', 'Parziale', 'Finale 100%'];
     items.forEach((ms, i) => {
       const card = document.createElement('div');
       card.className = 'modal-ms-card';
-      if (!ms) { card.innerHTML = `<div class="ms-lbl">${labels[i]}</div><div class="ms-val" style="color:var(--muted)">—</div>`; }
+      const lbl = ms ? ms.titolo : fallbackLabels[i];
+      if (!ms) { card.innerHTML = `<div class="ms-lbl">${lbl}</div><div class="ms-val" style="color:var(--muted)">—</div>`; }
       else {
         const {colore, label} = getMilestoneCountdownModal(ms.data);
         const dataFmt = new Date(ms.data).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
-        card.innerHTML = `<div class="ms-lbl">${labels[i]}</div><div class="ms-val" style="color:${colore}">${label}</div><div class="ms-date">${dataFmt}</div>`;
+        card.innerHTML = `<div class="ms-lbl">${lbl}</div><div class="ms-val" style="color:${colore}">${label}</div><div class="ms-date">${dataFmt}</div>`;
       }
       msDiv.appendChild(card);
     });
@@ -1088,17 +1090,17 @@ const MILESTONES = [
 // Per ogni lotto, le 3 milestone specifiche in ordine cronologico
 const MILESTONES_PER_LOTTO = {
   '1':  [{num:'01',titolo:'Invio richieste permessi',data:'2026-09-30'},{num:'04',titolo:'1° Rilascio — 50%',data:'2027-04-30'},{num:'06',titolo:'2° Rilascio — 100%',data:'2027-11-15'}],
-  '1A': [{num:'01',titolo:'Invio richieste permessi',data:'2026-09-30'},{num:'02',titolo:'1° Rilascio — 90%',data:'2026-10-31'},{num:'03',titolo:'2° Rilascio — 100%',data:'2026-12-31'}],
-  '1B': [{num:'01',titolo:'Invio richieste permessi',data:'2026-09-30'},{num:'02',titolo:'1° Rilascio — 90%',data:'2026-10-31'},{num:'03',titolo:'2° Rilascio — 100%',data:'2026-12-31'}],
+  '1A': [{num:'02',titolo:'1° Rilascio — 90%',data:'2026-10-31'},{num:'03',titolo:'2° Rilascio — 100%',data:'2026-12-31'}],
+  '1B': [{num:'02',titolo:'1° Rilascio — 90%',data:'2026-10-31'},{num:'03',titolo:'2° Rilascio — 100%',data:'2026-12-31'}],
   '2':  [{num:'01',titolo:'Invio richieste permessi',data:'2026-09-30'},{num:'04',titolo:'1° Rilascio — 50%',data:'2027-04-30'},{num:'06',titolo:'2° Rilascio — 100%',data:'2027-11-15'}],
-  '2A': [{num:'01',titolo:'Invio richieste permessi',data:'2026-09-30'},{num:'02',titolo:'1° Rilascio — 90%',data:'2026-10-31'},{num:'03',titolo:'2° Rilascio — 100%',data:'2026-12-31'}],
-  '2B': [{num:'01',titolo:'Invio richieste permessi',data:'2026-09-30'},{num:'02',titolo:'1° Rilascio — 90%',data:'2026-10-31'},{num:'03',titolo:'2° Rilascio — 100%',data:'2026-12-31'}],
+  '2A': [{num:'02',titolo:'1° Rilascio — 90%',data:'2026-10-31'},{num:'03',titolo:'2° Rilascio — 100%',data:'2026-12-31'}],
+  '2B': [{num:'02',titolo:'1° Rilascio — 90%',data:'2026-10-31'},{num:'03',titolo:'2° Rilascio — 100%',data:'2026-12-31'}],
   '3':  [{num:'01',titolo:'Invio richieste permessi',data:'2026-09-30'},{num:'04',titolo:'1° Rilascio — 50%',data:'2027-04-30'},{num:'06',titolo:'2° Rilascio — 100%',data:'2027-11-15'}],
   '4':  [{num:'01',titolo:'Invio richieste permessi',data:'2026-09-30'},{num:'04',titolo:'1° Rilascio — 50%',data:'2027-04-30'},{num:'06',titolo:'2° Rilascio — 100%',data:'2027-11-15'}],
   '5':  [{num:'01',titolo:'Invio richieste permessi',data:'2026-09-30'},{num:'04',titolo:'1° Rilascio — 50%',data:'2027-04-30'},{num:'06',titolo:'2° Rilascio — 100%',data:'2027-11-15'}],
   '6':  [{num:'01',titolo:'Invio richieste permessi',data:'2026-09-30'},{num:'05',titolo:'1° Rilascio — 50%',data:'2027-05-31'},{num:'06',titolo:'2° Rilascio — 100%',data:'2027-11-15'}],
-  '7':  [{num:'01',titolo:'Invio richieste permessi',data:'2026-09-30'},{num:'08',titolo:'3° Rilascio — 100%',data:'2028-07-31'}],
-  '8':  [{num:'01',titolo:'Invio richieste permessi',data:'2026-09-30'},{num:'07',titolo:'2° Rilascio — 100%',data:'2028-03-31'}],
+  '7':  [{num:'01',titolo:'Invio richieste permessi',data:'2026-09-30'},{num:'07',titolo:'Realizzazione 50%',data:'2027-09-30'},{num:'08',titolo:'3° Rilascio — 100%',data:'2028-07-31'}],
+  '8':  [{num:'01',titolo:'Invio richieste permessi',data:'2026-09-30'},{num:'07',titolo:'Realizzazione 50%',data:'2027-09-30'},{num:'07b',titolo:'2° Rilascio — 100%',data:'2028-03-31'}],
 };
 
 function renderMilestones() {
