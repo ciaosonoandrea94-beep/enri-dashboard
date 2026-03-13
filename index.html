@@ -1534,6 +1534,8 @@ function renderStoricoModal() {
     </tr>`;
   }).join('');
 
+  const totKm = (totLast/1000).toFixed(1);
+
   const tabellaHtml = `
     <div style="margin-top:16px;font-size:11px;color:var(--muted);padding:0 4px">
       <div style="font-weight:600;color:var(--text);margin-bottom:6px">
@@ -1546,8 +1548,25 @@ function renderStoricoModal() {
           <th style="text-align:right;padding:4px 8px;border-bottom:1px solid var(--border)">Km</th>
           <th style="text-align:right;padding:4px 8px;border-bottom:1px solid var(--border)">%</th>
         </tr></thead>
-        <tbody>${righeStati}</tbody>
+        <tbody>
+          ${righeStati}
+          <tr style="border-top:2px solid var(--border);font-weight:600;color:var(--text)">
+            <td style="padding:6px 8px;display:flex;align-items:center;gap:6px">
+              <span style="display:inline-block;width:10px;height:10px;flex-shrink:0"></span>
+              TOTALE
+            </td>
+            <td style="text-align:right;padding:6px 8px;font-family:'DM Mono',monospace">${totKm} km</td>
+            <td style="text-align:right;padding:6px 8px;font-family:'DM Mono',monospace">100%</td>
+          </tr>
+        </tbody>
       </table>
+      <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span style="color:var(--muted);font-size:10px">🧪 Test:</span>
+        <button onclick="seedDemoData()" style="font-size:10px;padding:4px 12px;border-radius:4px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);cursor:pointer" id="btnSeedDemo">
+          Inietta 7 giorni demo in JSONBin
+        </button>
+        <span id="seedStatus" style="font-size:10px;color:var(--muted)"></span>
+      </div>
     </div>`;
 
   // Wrapper con altezza fissa per il grafico — evita che si espanda infinitamente
@@ -1580,6 +1599,95 @@ function renderStoricoModal() {
       }
     }
   });
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Seed dati demo (7 giorni) ─────────────────────────────────────────────────
+async function seedDemoData() {
+  const btn = document.getElementById('btnSeedDemo');
+  const status = document.getElementById('seedStatus');
+  if (!btn) return;
+  btn.disabled = true;
+  btn.textContent = '⏳ Invio...';
+  status.textContent = '';
+
+  try {
+    // Usa i dati reali attuali come base
+    const record = await jsonbinLoad();
+    const storicoEsistente = (record && record.storico) ? record.storico : [];
+
+    // Prendi l'ultimo snapshot reale come punto di partenza
+    const baseData = storicoEsistente.length > 0
+      ? JSON.parse(JSON.stringify(storicoEsistente[storicoEsistente.length-1].data))
+      : (window._storicoCompleto && window._storicoCompleto.length > 0
+          ? JSON.parse(JSON.stringify(window._storicoCompleto[window._storicoCompleto.length-1].data))
+          : null);
+
+    if (!baseData) {
+      status.textContent = '❌ Nessun dato reale disponibile come base';
+      btn.disabled = false; btn.textContent = 'Inietta 7 giorni demo in JSONBin';
+      return;
+    }
+
+    // Sequenza stati: simula progressione realistica
+    const PROGRESSIONE = [
+      'IN ATTESA', 'IN REDAZIONE', 'IN FIRMA RDS',
+      'INVIATO', 'PROTOCOLLATO', 'OTTENUTO'
+    ];
+
+    // Genera 7 snapshot: ogni giorno sposta ~2% da stati iniziali verso stati avanzati
+    const nuoviEntry = [];
+    for (let g = 6; g >= 0; g--) {
+      const d = new Date();
+      d.setDate(d.getDate() - g);
+      d.setHours(9, 0, 0, 0);
+
+      // Clona i dati e applica variazione progressiva
+      const snapshotData = JSON.parse(JSON.stringify(baseData));
+      const factor = (7 - g) / 7; // 0→1 nel corso dei 7 giorni
+
+      // Per ogni riga, simula piccole variazioni: sposta km da IN ATTESA verso stati avanzati
+      const attesa = snapshotData.filter(r => r.stato === 'IN ATTESA');
+      const totalMetri = snapshotData.reduce((a,r) => a+r.metri, 0);
+      const shiftPerDay = totalMetri * 0.008 * factor; // ~0.8% al giorno
+
+      attesa.forEach((r, i) => {
+        if (i % 3 === 0 && r.metri > 1000) {
+          const shift = Math.min(shiftPerDay / Math.max(attesa.length,1), r.metri * 0.05);
+          r.metri = Math.max(0, r.metri - shift);
+          // Aggiungi ai protocollati dello stesso lotto
+          const target = snapshotData.find(x => x.lotto === r.lotto && x.stato === 'PROTOCOLLATO');
+          if (target) target.metri += shift;
+          else snapshotData.push({ lotto: r.lotto, stato: 'PROTOCOLLATO', metri: shift, totale: r.totale, pct: 0 });
+        }
+      });
+
+      nuoviEntry.push({ data: snapshotData, ts: d.toISOString() });
+    }
+
+    // Combina esistente (senza demo precedenti) + nuovi 7 giorni
+    // Rimuove eventuali entry demo già presenti (ultimi 7 se erano già stati iniettati)
+    const storicoBase = storicoEsistente.length > 1
+      ? storicoEsistente.slice(0, storicoEsistente.length - 1) // tieni tutto tranne l'ultimo (che diventa il giorno 7)
+      : storicoEsistente;
+
+    const nuovoStorico = [...storicoBase, ...nuoviEntry];
+    // Limita
+    const limitato = nuovoStorico.slice(-STORICO_MAX_ENTRIES);
+
+    await jsonbinSave({ storico: limitato });
+    window._storicoCompleto = limitato;
+
+    status.textContent = `✅ ${nuoviEntry.length} giorni iniettati`;
+    btn.textContent = '✓ Fatto';
+    // Ricarica il grafico
+    setTimeout(() => renderStoricoModal(), 300);
+
+  } catch(e) {
+    status.textContent = '❌ ' + e.message;
+    btn.disabled = false;
+    btn.textContent = 'Inietta 7 giorni demo in JSONBin';
+  }
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
