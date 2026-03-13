@@ -1486,8 +1486,7 @@ function renderStoricoModal() {
     return;
   }
 
-  // Un dataset per ogni gruppo di stati (tutti i lotti aggregati)
-  const STATI_GRAFICI = [
+  const STATI_TABELLA = [
     { label: 'In Attesa / Red.',  stati: ['IN ATTESA','IN REDAZIONE','IN REDAZIONE INTEGRAZIONE'], color: '#4a4f6a' },
     { label: 'In Firma RDS',      stati: ['IN FIRMA RDS'],                                         color: '#e07b3a' },
     { label: 'Inviato / Prot.',   stati: ['INVIATO','PROTOCOLLATO'],                               color: '#4f8ef7' },
@@ -1496,30 +1495,10 @@ function renderStoricoModal() {
     { label: 'Ottenuto',          stati: ['OTTENUTO'],                                             color: '#3a8c5c' },
   ];
 
-  const labels = storico.map(s => {
-    const d = new Date(s.ts);
-    return d.toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit', year:'2-digit' });
-  });
-
-  const datasets = STATI_GRAFICI.map(g => {
-    const values = storico.map(s => {
-      const totale = s.data.reduce((acc, r) => acc + r.metri, 0);
-      const match  = s.data.filter(r => g.stati.includes(r.stato)).reduce((acc, r) => acc + r.metri, 0);
-      return totale > 0 ? Math.round(match / totale * 1000) / 10 : 0;
-    });
-    return {
-      label: g.label, data: values,
-      borderColor: g.color, backgroundColor: g.color + '33',
-      tension: 0.3, fill: false,
-      pointRadius: storico.length > 20 ? 2 : 4,
-      pointHoverRadius: 6, borderWidth: 2
-    };
-  });
-
-  // Tabella: ultima rilevazione con % per ogni stato
+  // Tabella ultima rilevazione
   const last = storico[storico.length - 1];
   const totLast = last.data.reduce((a,r) => a + r.metri, 0);
-  const righeStati = STATI_GRAFICI.map(g => {
+  const righeStati = STATI_TABELLA.map(g => {
     const m = last.data.filter(r=>g.stati.includes(r.stato)).reduce((a,r)=>a+r.metri,0);
     const pct = totLast > 0 ? (m/totLast*100).toFixed(1) : '0.0';
     const km  = (m/1000).toFixed(1);
@@ -1568,25 +1547,21 @@ function renderStoricoModal() {
       </div>
     </div>`;
 
-  // Wrapper con altezza fissa per il grafico — evita che si espanda infinitamente
+  const currentMode = window._storicoViewMode || 'stati';
+  const btnStatiStyle = (m) => `font-size:10px;padding:3px 12px;border-radius:20px;cursor:pointer;transition:all .2s;border:1px solid ${m==='stati'?'#4f8ef7':'var(--border)'};background:${m==='stati'?'#4f8ef720':'transparent'};color:${m==='stati'?'#4f8ef7':'var(--muted)'}`;
+  const btnLottiStyle = (m) => `font-size:10px;padding:3px 12px;border-radius:20px;cursor:pointer;transition:all .2s;border:1px solid ${m==='lotti'?'#4f8ef7':'var(--border)'};background:${m==='lotti'?'#4f8ef720':'transparent'};color:${m==='lotti'?'#4f8ef7':'var(--muted)'}`;
+
   body.innerHTML = `
     <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap" id="storicoFiltri">
-      <button onclick="storicoToggleView('stati')" id="btnViewStati"
-        style="font-size:10px;padding:3px 12px;border-radius:20px;border:1px solid #4f8ef7;background:#4f8ef720;color:#4f8ef7;cursor:pointer;transition:all .2s">
-        Per stato
-      </button>
-      <button onclick="storicoToggleView('lotti')" id="btnViewLotti"
-        style="font-size:10px;padding:3px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .2s">
-        Per lotto
-      </button>
+      <button onclick="storicoToggleView('stati')" id="btnViewStati" style="${btnStatiStyle(currentMode)}">Per stato</button>
+      <button onclick="storicoToggleView('lotti')" id="btnViewLotti" style="${btnLottiStyle(currentMode)}">Per lotto</button>
     </div>
     <div style="position:relative;height:280px;width:100%"><canvas id="storicoChart"></canvas></div>
     ${tabellaHtml}`;
 
   if (_storicoChartInstance) { _storicoChartInstance.destroy(); _storicoChartInstance = null; }
-
-  window._storicoViewMode = window._storicoViewMode || 'stati';
-  _buildStoricoChart(storico, labels, datasets);
+  // Delega al toggle che gestisce tutto (evita duplicazione logica)
+  storicoToggleView(currentMode);
 }
 
 window.storicoToggleView = function(mode) {
