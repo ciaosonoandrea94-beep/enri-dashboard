@@ -1607,16 +1607,16 @@ window.storicoToggleView = function(mode) {
       })
     }));
   } else {
+    const STATI_ATTESA = ['IN ATTESA','IN REDAZIONE','IN REDAZIONE INTEGRAZIONE'];
     datasets = LOTTI_G.map(g => ({
       _color: g.color,
       label: g.label,
       data: storico.map(s => {
         const rows = s.data.filter(r=>g.lottos.includes(r.lotto));
-        // Usa r.totale (totale lotto dal CSV) invece della somma di r.metri
-        // perché rows potrebbe non contenere tutte le righe di stato
         const tot  = rows.length > 0 ? Math.max(...rows.map(r=>r.totale||0)) : 0;
-        const obt  = rows.filter(r=>r.stato==='OTTENUTO').reduce((a,r)=>a+r.metri,0);
-        return tot>0 ? Math.round(obt/tot*1000)/10 : 0;
+        // Avanzamento = tutto ciò che NON è In Attesa / In Redazione
+        const avanz = rows.filter(r=>!STATI_ATTESA.includes(r.stato)).reduce((a,r)=>a+r.metri,0);
+        return tot>0 ? Math.round(avanz/tot*1000)/10 : 0;
       })
     }));
   }
@@ -1634,11 +1634,11 @@ window.storicoToggleView = function(mode) {
     const overlay = document.createElement('div');
     overlay.id = 'storicoZeroOverlay';
     overlay.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;pointer-events:none';
-    overlay.innerHTML = `<span style="font-size:22px">🏗</span><span style="font-size:12px;color:var(--muted)">Nessun permesso <b style="color:var(--text)">Ottenuto</b> ancora</span><span style="font-size:10px;color:#525870">Il grafico si attiverà con i primi permessi autorizzati</span>`;
+    overlay.innerHTML = `<span style="font-size:22px">🏗</span><span style="font-size:12px;color:var(--muted)">Nessun avanzamento registrato ancora</span><span style="font-size:10px;color:#525870">Il grafico si attiverà quando le prime tratte usciranno dall'attesa</span>`;
     if (chartWrap) chartWrap.appendChild(overlay);
   }
 
-  _buildStoricoChart(storico, labels, datasets, yMax);
+  _buildStoricoChart(storico, labels, datasets, yMax, mode);
 };
 
 async function svuotaStorico() {
@@ -1661,7 +1661,7 @@ async function svuotaStorico() {
   }
 }
 
-function _buildStoricoChart(storico, labels, datasets, yMax) {
+function _buildStoricoChart(storico, labels, datasets, yMax, mode) {
   yMax = yMax || 100;
   if (_storicoChartInstance) { _storicoChartInstance.destroy(); _storicoChartInstance = null; }
   const canvas = document.getElementById('storicoChart');
@@ -1724,6 +1724,7 @@ function _buildStoricoChart(storico, labels, datasets, yMax) {
           cornerRadius: 8,
           callbacks: {
             title: items => `📅 ${items[0].label}`,
+            afterTitle: () => mode === 'lotti' ? '  avanzamento (uscito da attesa/redaz.)' : '',
             label: c => {
               const bar = '█'.repeat(Math.round(c.parsed.y / 5));
               return ` ${c.dataset.label}: ${c.parsed.y.toFixed(1)}%  ${bar}`;
