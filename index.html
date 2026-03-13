@@ -1569,31 +1569,168 @@ function renderStoricoModal() {
     </div>`;
 
   // Wrapper con altezza fissa per il grafico — evita che si espanda infinitamente
-  body.innerHTML = `<div style="position:relative;height:240px;width:100%"><canvas id="storicoChart"></canvas></div>${tabellaHtml}`;
+  body.innerHTML = `
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap" id="storicoFiltri">
+      <button onclick="storicoToggleView('stati')" id="btnViewStati"
+        style="font-size:10px;padding:3px 12px;border-radius:20px;border:1px solid #4f8ef7;background:#4f8ef720;color:#4f8ef7;cursor:pointer;transition:all .2s">
+        Per stato
+      </button>
+      <button onclick="storicoToggleView('lotti')" id="btnViewLotti"
+        style="font-size:10px;padding:3px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .2s">
+        Per lotto
+      </button>
+    </div>
+    <div style="position:relative;height:280px;width:100%"><canvas id="storicoChart"></canvas></div>
+    ${tabellaHtml}`;
 
   if (_storicoChartInstance) { _storicoChartInstance.destroy(); _storicoChartInstance = null; }
 
-  const ctx = document.getElementById('storicoChart').getContext('2d');
+  window._storicoViewMode = window._storicoViewMode || 'stati';
+  _buildStoricoChart(storico, labels, datasets);
+}
+
+window.storicoToggleView = function(mode) {
+  window._storicoViewMode = mode;
+  document.getElementById('btnViewStati').style.cssText =
+    `font-size:10px;padding:3px 12px;border-radius:20px;cursor:pointer;transition:all .2s;border:1px solid ${mode==='stati'?'#4f8ef7':'var(--border)'};background:${mode==='stati'?'#4f8ef720':'transparent'};color:${mode==='stati'?'#4f8ef7':'var(--muted)'}`;
+  document.getElementById('btnViewLotti').style.cssText =
+    `font-size:10px;padding:3px 12px;border-radius:20px;cursor:pointer;transition:all .2s;border:1px solid ${mode==='lotti'?'#4f8ef7':'var(--border)'};background:${mode==='lotti'?'#4f8ef720':'transparent'};color:${mode==='lotti'?'#4f8ef7':'var(--muted)'}`;
+
+  const storico = window._storicoCompleto || [];
+  const labels  = storico.map(s => new Date(s.ts).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'2-digit'}));
+
+  const STATI_G = [
+    { label: 'In Attesa / Red.',  stati: ['IN ATTESA','IN REDAZIONE','IN REDAZIONE INTEGRAZIONE'], color: '#4a5080' },
+    { label: 'In Firma RDS',      stati: ['IN FIRMA RDS'],                                         color: '#e07b3a' },
+    { label: 'Inviato / Prot.',   stati: ['INVIATO','PROTOCOLLATO'],                               color: '#4f8ef7' },
+    { label: 'Nec. Integraz.',    stati: ['NECESSARIA INTEGRAZIONE'],                              color: '#cc3333' },
+    { label: 'Prot. Integraz.',   stati: ['PROTOCOLLATO INTEGRAZIONE'],                            color: '#548235' },
+    { label: 'Ottenuto',          stati: ['OTTENUTO'],                                             color: '#3a8c5c' },
+  ];
+  const LOTTI_G = [
+    { label: 'Lotto 1A', lottos: ['1A'], color: '#4f8ef7' },
+    { label: 'Lotto 1B', lottos: ['1B'], color: '#7ab3f7' },
+    { label: 'Lotto 2A', lottos: ['2A'], color: '#e07b3a' },
+    { label: 'Lotto 2B', lottos: ['2B'], color: '#f7a96a' },
+  ];
+
+  let datasets;
+  if (mode === 'stati') {
+    datasets = STATI_G.map(g => ({
+      _color: g.color,
+      label: g.label,
+      data: storico.map(s => {
+        const tot = s.data.reduce((a,r)=>a+r.metri,0);
+        const m   = s.data.filter(r=>g.stati.includes(r.stato)).reduce((a,r)=>a+r.metri,0);
+        return tot>0 ? Math.round(m/tot*1000)/10 : 0;
+      })
+    }));
+  } else {
+    datasets = LOTTI_G.map(g => ({
+      _color: g.color,
+      label: g.label,
+      data: storico.map(s => {
+        const rows = s.data.filter(r=>g.lottos.includes(r.lotto));
+        const tot  = rows.reduce((a,r)=>a+r.metri,0);
+        const obt  = rows.filter(r=>r.stato==='OTTENUTO').reduce((a,r)=>a+r.metri,0);
+        return tot>0 ? Math.round(obt/tot*1000)/10 : 0;
+      })
+    }));
+  }
+  _buildStoricoChart(storico, labels, datasets);
+};
+
+function _buildStoricoChart(storico, labels, datasets) {
+  if (_storicoChartInstance) { _storicoChartInstance.destroy(); _storicoChartInstance = null; }
+  const canvas = document.getElementById('storicoChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  // Gradients
+  const dsWithGrad = datasets.map(ds => {
+    const color = ds._color || ds.borderColor || '#4f8ef7';
+    const grad = ctx.createLinearGradient(0, 0, 0, 280);
+    grad.addColorStop(0,   color + '55');
+    grad.addColorStop(0.6, color + '18');
+    grad.addColorStop(1,   color + '00');
+    return {
+      label: ds.label,
+      data: ds.data,
+      borderColor: color,
+      backgroundColor: grad,
+      tension: 0.45,
+      fill: true,
+      pointRadius: storico.length > 14 ? 2 : 5,
+      pointHoverRadius: 7,
+      pointBackgroundColor: color,
+      pointBorderColor: '#1a1d2e',
+      pointBorderWidth: 2,
+      borderWidth: 2.5,
+    };
+  });
+
   _storicoChartInstance = new Chart(ctx, {
     type: 'line',
-    data: { labels, datasets },
+    data: { labels, datasets: dsWithGrad },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      animation: { duration: 600, easing: 'easeInOutQuart' },
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { labels: { color: '#e8eaf0', font: { size: 11 }, boxWidth: 12 } },
-        tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${c.parsed.y}%` } }
+        legend: {
+          position: 'bottom',
+          labels: {
+            color: '#a0a8c0',
+            font: { size: 10, family: "'DM Sans', sans-serif" },
+            boxWidth: 10, boxHeight: 10,
+            borderRadius: 3,
+            padding: 14,
+            usePointStyle: true, pointStyle: 'circle'
+          }
+        },
+        tooltip: {
+          backgroundColor: '#1e2235ee',
+          borderColor: '#3a4060',
+          borderWidth: 1,
+          padding: 12,
+          titleColor: '#e8eaf0',
+          titleFont: { size: 11, weight: '600' },
+          bodyColor: '#a0a8c0',
+          bodyFont: { size: 11 },
+          caretSize: 5,
+          cornerRadius: 8,
+          callbacks: {
+            title: items => `📅 ${items[0].label}`,
+            label: c => {
+              const bar = '█'.repeat(Math.round(c.parsed.y / 5));
+              return ` ${c.dataset.label}: ${c.parsed.y.toFixed(1)}%  ${bar}`;
+            }
+          }
+        }
       },
       scales: {
         x: {
-          ticks: { color: '#6b7080', font: { size: 10 }, maxRotation: 45, maxTicksLimit: 12 },
-          grid: { color: '#2e334788' }
+          ticks: {
+            color: '#525870',
+            font: { size: 9 },
+            maxRotation: 0,
+            maxTicksLimit: 8,
+            autoSkip: true,
+          },
+          grid: { color: '#ffffff08', drawBorder: false },
+          border: { display: false }
         },
         y: {
           min: 0, max: 100,
-          ticks: { color: '#6b7080', font: { size: 10 }, stepSize: 20, callback: v => v+'%' },
-          grid: { color: '#2e334788' }
+          ticks: {
+            color: '#525870',
+            font: { size: 9 },
+            stepSize: 25,
+            callback: v => v + '%'
+          },
+          grid: { color: '#ffffff0a', drawBorder: false },
+          border: { display: false }
         }
       }
     }
