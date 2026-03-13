@@ -1612,10 +1612,17 @@ window.storicoToggleView = function(mode) {
       })
     }));
   }
-  _buildStoricoChart(storico, labels, datasets);
+
+  // Y max dinamico: arrotonda al prossimo multiplo di 10 sopra il massimo valore
+  const allValues = datasets.flatMap(d => d.data);
+  const maxVal = Math.max(...allValues, 1);
+  const yMax = mode === 'stati' ? 100 : Math.min(100, Math.ceil(maxVal / 10) * 10 + 10);
+
+  _buildStoricoChart(storico, labels, datasets, yMax);
 };
 
-function _buildStoricoChart(storico, labels, datasets) {
+function _buildStoricoChart(storico, labels, datasets, yMax) {
+  yMax = yMax || 100;
   if (_storicoChartInstance) { _storicoChartInstance.destroy(); _storicoChartInstance = null; }
   const canvas = document.getElementById('storicoChart');
   if (!canvas) return;
@@ -1697,11 +1704,11 @@ function _buildStoricoChart(storico, labels, datasets) {
           border: { display: false }
         },
         y: {
-          min: 0, max: 100,
+          min: 0, max: yMax,
           ticks: {
             color: '#525870',
             font: { size: 9 },
-            stepSize: 25,
+            stepSize: yMax <= 30 ? 5 : yMax <= 60 ? 10 : 25,
             callback: v => v + '%'
           },
           grid: { color: '#ffffff0a', drawBorder: false },
