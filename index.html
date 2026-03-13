@@ -1542,26 +1542,55 @@ function renderStoricoModal() {
           </tr>
         </tbody>
       </table>
-      <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px;">
-        <div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">📅 Aggiungi snapshot a data precedente</div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5">
-          Usa questa funzione se hai caricato i dati in ritardo rispetto alla data reale di rilevazione.<br>
-          Salva i <b style="color:var(--text)">dati attuali del CSV</b> con la data che scegli tu.
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px">
-            <span style="font-size:10px;color:var(--muted)">Data rilevazione:</span>
-            <input type="date" id="inputDataBackdate" style="background:transparent;border:none;color:var(--text);font-size:11px;font-family:'DM Mono',monospace;outline:none;cursor:pointer"
-              max="${new Date().toISOString().split('T')[0]}"
-              value="${new Date(Date.now()-86400000).toISOString().split('T')[0]}">
+      <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px;display:flex;flex-direction:column;gap:14px">
+
+        <!-- AZIONE 1: sposta data ultimo snapshot -->
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px">
+          <div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:4px">📌 Correggi la data dell'ultimo snapshot</div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:10px;line-height:1.5">
+            Usa questa opzione se lo snapshot salvato ha la data sbagliata.<br>
+            <b style="color:var(--text)">Ultimo snapshot:</b> <span id="ultimoSnapshotData" style="font-family:'DM Mono',monospace;color:var(--accent)"></span>
           </div>
-          <button onclick="aggiungiSnapshotBackdate()" id="btnBackdate"
-            style="font-size:11px;padding:6px 16px;border-radius:6px;background:var(--accent);color:white;border:none;cursor:pointer;font-weight:500">
-            ✚ Aggiungi al grafico
-          </button>
-          <span id="backdateStatus" style="font-size:10px;color:var(--muted)"></span>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 10px">
+              <span style="font-size:10px;color:var(--muted)">Nuova data:</span>
+              <input type="date" id="inputDataRename"
+                style="background:transparent;border:none;color:var(--text);font-size:11px;font-family:'DM Mono',monospace;outline:none;cursor:pointer"
+                max="${new Date().toISOString().split('T')[0]}"
+                value="${new Date(Date.now()-86400000).toISOString().split('T')[0]}">
+            </div>
+            <button onclick="rinominaUltimoSnapshot()" id="btnRename"
+              style="font-size:11px;padding:5px 14px;border-radius:6px;background:var(--accent);color:white;border:none;cursor:pointer;font-weight:500">
+              ✎ Sposta data
+            </button>
+            <span id="renameStatus" style="font-size:10px;color:var(--muted)"></span>
+          </div>
         </div>
-        <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+
+        <!-- AZIONE 2: aggiungi snapshot backdatato -->
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px">
+          <div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:4px">✚ Aggiungi snapshot a data precedente</div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:10px;line-height:1.5">
+            Salva i dati CSV attuali con una data diversa — utile per recuperare un giorno mancante.
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 10px">
+              <span style="font-size:10px;color:var(--muted)">Data rilevazione:</span>
+              <input type="date" id="inputDataBackdate"
+                style="background:transparent;border:none;color:var(--text);font-size:11px;font-family:'DM Mono',monospace;outline:none;cursor:pointer"
+                max="${new Date().toISOString().split('T')[0]}"
+                value="${new Date(Date.now()-86400000).toISOString().split('T')[0]}">
+            </div>
+            <button onclick="aggiungiSnapshotBackdate()" id="btnBackdate"
+              style="font-size:11px;padding:5px 14px;border-radius:6px;background:var(--surface);color:var(--text);border:1px solid var(--border);cursor:pointer;font-weight:500">
+              ✚ Aggiungi
+            </button>
+            <span id="backdateStatus" style="font-size:10px;color:var(--muted)"></span>
+          </div>
+        </div>
+
+        <!-- Azioni distruttive in fondo, piccole -->
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:2px">
           <button onclick="svuotaStorico()" style="font-size:10px;padding:4px 12px;border-radius:4px;background:#cc333311;color:#cc3333;border:1px solid #cc333344;cursor:pointer" id="btnSvuotaStorico">
             🗑 Svuota tutto lo storico
           </button>
@@ -1570,6 +1599,7 @@ function renderStoricoModal() {
           </button>
           <span id="seedStatus" style="font-size:10px;color:var(--muted)"></span>
         </div>
+
       </div>
     </div>`;
 
@@ -1587,6 +1617,11 @@ function renderStoricoModal() {
     ${tabellaHtml}`;
 
   if (_storicoChartInstance) { _storicoChartInstance.destroy(); _storicoChartInstance = null; }
+  // Popola la data dell'ultimo snapshot nel campo "Correggi data"
+  const ultimoEl = document.getElementById('ultimoSnapshotData');
+  if (ultimoEl && storico.length > 0) {
+    ultimoEl.textContent = new Date(storico[storico.length-1].ts).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
+  }
   // Delega al toggle che gestisce tutto (evita duplicazione logica)
   storicoToggleView(currentMode);
 }
@@ -1676,6 +1711,45 @@ window.storicoToggleView = function(mode) {
 
   _buildStoricoChart(storico, labels, datasets, yMax, mode);
 };
+
+async function rinominaUltimoSnapshot() {
+  const btn = document.getElementById('btnRename');
+  const status = document.getElementById('renameStatus');
+  const input = document.getElementById('inputDataRename');
+  if (!btn || !input) return;
+
+  const nuovaData = input.value; // YYYY-MM-DD
+  if (!nuovaData) { status.textContent = '⚠ Scegli una data'; return; }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Salvataggio...';
+  status.textContent = '';
+
+  try {
+    const record = await jsonbinLoad();
+    const storico = (record && record.storico) ? record.storico : [];
+    if (storico.length === 0) { status.textContent = '⚠ Nessuno snapshot da modificare'; btn.disabled=false; btn.textContent='✎ Sposta data'; return; }
+
+    // Modifica il ts dell'ultimo snapshot
+    storico.sort((a,b) => new Date(a.ts)-new Date(b.ts));
+    storico[storico.length-1].ts = new Date(nuovaData + 'T09:00:00').toISOString();
+
+    // Riscarta e salva
+    storico.sort((a,b) => new Date(a.ts)-new Date(b.ts));
+    await jsonbinSave({ storico });
+    window._storicoCompleto = storico;
+
+    const dataFmt = new Date(nuovaData).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
+    status.textContent = `✅ Spostato al ${dataFmt}`;
+    btn.textContent = '✎ Sposta data';
+    btn.disabled = false;
+    setTimeout(() => renderStoricoModal(), 400);
+  } catch(e) {
+    status.textContent = '❌ ' + e.message;
+    btn.disabled = false;
+    btn.textContent = '✎ Sposta data';
+  }
+}
 
 async function aggiungiSnapshotBackdate() {
   const btn = document.getElementById('btnBackdate');
