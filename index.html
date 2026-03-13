@@ -1563,6 +1563,7 @@ function renderStoricoModal() {
       <button onclick="storicoToggleView('lotti')" id="btnViewLotti" style="${btnLottiStyle(currentMode)}">Per lotto</button>
     </div>
     <div style="position:relative;height:280px;width:100%"><canvas id="storicoChart"></canvas></div>
+    <div id="storicoLegenda" style="display:flex;flex-wrap:wrap;gap:10px;padding:8px 4px 0;min-height:22px"></div>
     ${tabellaHtml}`;
 
   if (_storicoChartInstance) { _storicoChartInstance.destroy(); _storicoChartInstance = null; }
@@ -1638,6 +1639,21 @@ window.storicoToggleView = function(mode) {
     if (chartWrap) chartWrap.appendChild(overlay);
   }
 
+  // Legenda HTML
+  const legEl = document.getElementById('storicoLegenda');
+  if (legEl) {
+    if (mode === 'stati') {
+      legEl.innerHTML = datasets.map(d =>
+        `<span style="display:flex;align-items:center;gap:5px;font-size:10px;color:#a0a8c0">
+          <span style="width:8px;height:8px;border-radius:50%;background:${d._color};flex-shrink:0;display:inline-block"></span>
+          ${d.label}
+        </span>`
+      ).join('');
+    } else {
+      legEl.innerHTML = `<span style="font-size:10px;color:#525870;font-style:italic">% avanzamento = tratte uscite da In Attesa / In Redazione — etichette a destra del grafico</span>`;
+    }
+  }
+
   _buildStoricoChart(storico, labels, datasets, yMax, mode);
 };
 
@@ -1699,18 +1715,9 @@ function _buildStoricoChart(storico, labels, datasets, yMax, mode) {
       maintainAspectRatio: false,
       animation: { duration: 600, easing: 'easeInOutQuart' },
       interaction: { mode: 'index', intersect: false },
+      layout: { padding: { right: mode === 'lotti' ? 72 : 16 } },
       plugins: {
-        legend: {
-          position: 'bottom',
-          labels: {
-            color: '#a0a8c0',
-            font: { size: 10, family: "'DM Sans', sans-serif" },
-            boxWidth: 10, boxHeight: 10,
-            borderRadius: 3,
-            padding: 14,
-            usePointStyle: true, pointStyle: 'circle'
-          }
-        },
+        legend: { display: false },
         tooltip: {
           backgroundColor: '#1e2235ee',
           borderColor: '#3a4060',
@@ -1756,7 +1763,30 @@ function _buildStoricoChart(storico, labels, datasets, yMax, mode) {
           border: { display: false }
         }
       }
-    }
+    },
+    plugins: mode === 'lotti' ? [{
+      id: 'inlineLabels',
+      afterDraw(chart) {
+        const ctx2 = chart.ctx;
+        chart.data.datasets.forEach((ds, i) => {
+          const meta = chart.getDatasetMeta(i);
+          if (!meta.visible) return;
+          const lastPt = meta.data[meta.data.length - 1];
+          if (!lastPt) return;
+          const x = lastPt.x + 8;
+          const y = lastPt.y;
+          const val = ds.data[ds.data.length - 1];
+          const label = ds.label.replace('Lotto ', '');
+          ctx2.save();
+          ctx2.font = `600 10px 'DM Sans', sans-serif`;
+          ctx2.fillStyle = ds.borderColor;
+          ctx2.textAlign = 'left';
+          ctx2.textBaseline = 'middle';
+          ctx2.fillText(`${label}  ${val != null ? val.toFixed(1)+'%' : ''}`, x, y);
+          ctx2.restore();
+        });
+      }
+    }] : []
   });
 }
 // ─────────────────────────────────────────────────────────────────────────────
