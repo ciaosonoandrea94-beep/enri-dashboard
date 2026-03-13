@@ -1050,17 +1050,21 @@ function getMilestoneCountdown(data) {
   const scad = new Date(data);
   const diffGiorni = Math.ceil((scad - oggi) / (1000*60*60*24));
   let colore, label;
+  const _mesi = n => n === 1 ? '1 mese' : `${n} mesi`;
+  const _anni = n => n === 1 ? '1 anno' : `${n} anni`;
   if (diffGiorni < 0) {
     colore = '#3a8c5c'; label = '✓';
   } else if (diffGiorni <= 90) {
     colore = '#cc3333'; label = diffGiorni+' gg';
   } else if (diffGiorni <= 180) {
-    colore = '#c9a227'; label = Math.floor(diffGiorni/30.44)+' mesi';
+    colore = '#c9a227'; label = _mesi(Math.floor(diffGiorni/30.44));
   } else {
     colore = '#4f8ef7';
     const anniR = Math.floor(diffGiorni/365.25);
     const mesiR = Math.round((diffGiorni % 365.25) / 30.44);
-    label = anniR >= 1 ? (mesiR > 0 ? `${anniR} anni ${mesiR} mesi` : `${anniR} anni`) : Math.floor(diffGiorni/30.44)+' mesi';
+    label = anniR >= 1
+      ? (mesiR > 0 ? `${_anni(anniR)} e ${_mesi(mesiR)}` : _anni(anniR))
+      : _mesi(Math.floor(diffGiorni/30.44));
   }
   const dataFmt = new Date(data).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'2-digit'});
   return { colore, label, dataFmt };
@@ -1072,21 +1076,21 @@ function getMilestoneCountdownModal(data) {
   const scad = new Date(data);
   const diffGiorni = Math.ceil((scad - oggi) / (1000*60*60*24));
   let colore, label;
+  const _mesi = n => n === 1 ? '1 mese' : `${n} mesi`;
+  const _anni = n => n === 1 ? '1 anno' : `${n} anni`;
   if (diffGiorni < 0) {
     colore = '#3a8c5c'; label = '✓ Completata';
   } else if (diffGiorni <= 90) {
-    colore = '#cc3333'; label = diffGiorni + ' giorni';
+    colore = '#cc3333'; label = diffGiorni + (diffGiorni === 1 ? ' giorno' : ' giorni');
   } else if (diffGiorni <= 180) {
-    colore = '#c9a227'; label = Math.floor(diffGiorni/30.44) + ' mesi';
+    colore = '#c9a227'; label = _mesi(Math.floor(diffGiorni/30.44));
   } else {
     colore = '#4f8ef7';
     const anniR = Math.floor(diffGiorni/365.25);
     const mesiR = Math.round((diffGiorni % 365.25) / 30.44);
-    if (anniR >= 1) {
-      label = mesiR > 0 ? `${anniR} ann${anniR>1?'i':'o'} e ${mesiR} mesi` : `${anniR} ann${anniR>1?'i':'o'}`;
-    } else {
-      label = Math.floor(diffGiorni/30.44) + ' mesi';
-    }
+    label = anniR >= 1
+      ? (mesiR > 0 ? `${_anni(anniR)} e ${_mesi(mesiR)}` : _anni(anniR))
+      : _mesi(Math.floor(diffGiorni/30.44));
   }
   return { colore, label };
 }
@@ -1100,13 +1104,15 @@ function getMilestoneForLotto(lotto) {
   const scad = new Date(ms.data);
   const diffGiorni = Math.ceil((scad - oggi) / (1000*60*60*24));
   let colore, label;
+  const _mesi = n => n === 1 ? '1 mese' : `${n} mesi`;
+  const _anni = n => n === 1 ? '1 anno' : `${n} anni`;
   if (diffGiorni < 0) { colore='#3a8c5c'; label='✓ Completata'; }
-  else if (diffGiorni<=90) { colore='#cc3333'; label=diffGiorni+' giorni'; }
-  else if (diffGiorni<=180) { colore='#c9a227'; label=Math.floor(diffGiorni/30.44)+' mesi'; }
+  else if (diffGiorni<=90) { colore='#cc3333'; label=diffGiorni+(diffGiorni===1?' giorno':' giorni'); }
+  else if (diffGiorni<=180) { colore='#c9a227'; label=_mesi(Math.floor(diffGiorni/30.44)); }
   else {
     colore='#4f8ef7';
     const anniR=Math.floor(diffGiorni/365.25), mesiR=Math.round((diffGiorni%365.25)/30.44);
-    label=anniR>=1?(mesiR>0?`${anniR} ann${anniR>1?'i':'o'} e ${mesiR} mesi`:`${anniR} ann${anniR>1?'i':'o'}`):Math.floor(diffGiorni/30.44)+' mesi';
+    label=anniR>=1?(mesiR>0?`${_anni(anniR)} e ${_mesi(mesiR)}`:_anni(anniR)):_mesi(Math.floor(diffGiorni/30.44));
   }
   const dataFmt=scad.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
   return { colore, label, titolo: ms.titolo, dataFmt, tooltipText:`[${ms.num}] ${ms.titolo} — ${dataFmt}` };
@@ -1416,19 +1422,21 @@ function renderMilestones() {
       countdownHTML = `<span class="ms-days">✓</span><span class="ms-days-label">Completata</span>`;
     } else if (diffGiorni <= 90) {
       classe = 'danger';
-      countdownHTML = `<span class="ms-days">${diffGiorni}</span><span class="ms-days-label">giorni rimanenti</span>`;
+      countdownHTML = `<span class="ms-days">${diffGiorni}</span><span class="ms-days-label">${diffGiorni===1?'giorno rimanente':'giorni rimanenti'}</span>`;
     } else if (diffGiorni <= 180) {
       classe = 'warn';
-      countdownHTML = `<span class="ms-days">${diffMesi}</span><span class="ms-days-label">mesi rimanenti</span>`;
+      countdownHTML = `<span class="ms-days">${diffMesi}</span><span class="ms-days-label">${diffMesi===1?'mese rimanente':'mesi rimanenti'}</span>`;
     } else {
       classe = 'future';
       let label, sublabel;
       if (diffAnni >= 1) {
         const anniR = Math.floor(diffGiorni/365.25);
         const mesiR = Math.round((diffGiorni % 365.25) / 30.44);
-        label = anniR; sublabel = mesiR > 0 ? `ann${anniR>1?'i':'o'} e ${mesiR} mesi rimanenti` : `ann${anniR>1?'i':'o'} rimanenti`;
+        const strAnni = anniR===1 ? 'anno' : 'anni';
+        const strMesi = mesiR===1 ? 'mese' : 'mesi';
+        label = anniR; sublabel = mesiR > 0 ? `${strAnni} e ${mesiR} ${strMesi} rimanenti` : `${strAnni} rimanenti`;
       } else {
-        label = diffMesi; sublabel = 'mesi rimanenti';
+        label = diffMesi; sublabel = diffMesi===1 ? 'mese rimanente' : 'mesi rimanenti';
       }
       countdownHTML = `<span class="ms-days">${label}</span><span class="ms-days-label">${sublabel}</span>`;
     }
