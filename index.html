@@ -242,6 +242,26 @@
     <div class="kpi protint"><div class="kpi-label">Protocollato Integrazione</div><div class="kpi-value" id="kpi-protint">—</div><div class="kpi-sub" id="kpisub-protint">—</div></div>
     <div class="kpi ottenuto"><div class="kpi-label">🏆 Autorizzati</div><div class="kpi-value" id="kpi-ottenuto">—</div><div class="kpi-sub" id="kpisub-ottenuto">—</div></div>
   </div>
+  <!-- Grafico Cluster -->
+  <div id="clusterSection">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Avanzamento per Cluster — % Ottenuto</span>
+        <span style="font-size:14px;font-weight:600;font-family:'DM Mono',monospace;color:var(--text)" id="clusterStatus">—</span>
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap" id="clusterWrap"><div style="padding:16px;font-size:12px;color:var(--muted)">Caricamento riepilogo.csv...</div></div>
+      </div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#3a8c5c"></div>Ottenuto</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#548235"></div>Protocollato Integrazione</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#cc3333"></div>Necessaria Integrazione</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#4f8ef7"></div>Inviato / Protocollato</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#e07b3a"></div>In Firma RDS</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#4a4f6a"></div>In Attesa / Redazione</div>
+      </div>
+    </div>
+  </div>
   <div class="grid-main">
     <div class="card">
       <div class="card-header">
@@ -265,12 +285,12 @@
         <div class="chart-wrap" id="chartWrap"></div>
       </div>
       <div class="legend">
-        <div class="legend-item"><div class="legend-dot" style="background:#4a4f6a"></div>In Attesa / Redazione</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#e07b3a"></div>In Firma RDS</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#4f8ef7"></div>Inviato / Protocollato</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#cc3333"></div>Necessaria Integrazione</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#548235"></div>Protocollato Integrazione</div>
         <div class="legend-item"><div class="legend-dot" style="background:#3a8c5c"></div>Ottenuto</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#548235"></div>Protocollato Integrazione</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#cc3333"></div>Necessaria Integrazione</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#4f8ef7"></div>Inviato / Protocollato</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#e07b3a"></div>In Firma RDS</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#4a4f6a"></div>In Attesa / Redazione</div>
       </div>
       <div id="msLegendBar" style="display:flex;flex-wrap:wrap;gap:10px;padding:10px 18px;border-top:1px solid var(--border)">
         <span style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);align-self:center;margin-right:4px">⏱ Milestone:</span>
@@ -294,27 +314,6 @@
           <div id="donutLegend" style="width:100%;display:flex;flex-direction:column;gap:5px"></div>
         </div>
       </div>
-    </div>
-  </div>
-</div>
-
-<!-- Grafico Cluster -->
-<div id="clusterSection" style="padding:0 18px 18px">
-  <div class="card">
-    <div class="card-header">
-      <span class="card-title">Avanzamento per Cluster — % Ottenuto</span>
-      <span style="font-size:14px;font-weight:600;font-family:'DM Mono',monospace;color:var(--text)" id="clusterStatus">—</span>
-    </div>
-    <div class="card-body">
-      <div class="chart-wrap" id="clusterWrap"><div style="padding:16px;font-size:12px;color:var(--muted)">Caricamento riepilogo.csv...</div></div>
-    </div>
-    <div class="legend">
-      <div class="legend-item"><div class="legend-dot" style="background:#4a4f6a"></div>In Attesa / Redazione</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#e07b3a"></div>In Firma RDS</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#4f8ef7"></div>Inviato / Protocollato</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#cc3333"></div>Necessaria Integrazione</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#548235"></div>Protocollato Integrazione</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#3a8c5c"></div>Ottenuto</div>
     </div>
   </div>
 </div>
@@ -353,15 +352,37 @@ function buildGruppiMap(statiMap) {
 }
 
 function renderBarre(gruppiMap, totale, tooltip, onHover) {
+  // Ordine di avanzamento: dal più avanzato a sinistra, grigio (In Attesa/Redazione) sempre a destra
+  const ORDINE_AVANZAMENTO = [
+    'Ottenuto',
+    'Protocollato Integrazione',
+    'Necessaria Integrazione',
+    'Inviato / Protocollato',
+    'In Firma RDS',
+  ];
+  const GRIGIO_LABEL = 'In Attesa / Redazione';
+
   let html = '';
-  STATI_GRUPPI.forEach(g => {
+  // Prima i segmenti colorati in ordine di avanzamento
+  ORDINE_AVANZAMENTO.forEach(label => {
+    const g = STATI_GRUPPI.find(x => x.label === label);
+    if (!g) return;
     const m = gruppiMap[g.label] || 0;
     if (m <= 0) return;
     const pct = totale > 0 ? m / totale * 100 : 0;
-    // Mostra % solo se il segmento è abbastanza largo (>6%)
-    const label = pct >= 6 ? `<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;text-shadow:0 0 4px rgba(0,0,0,0.9),0 1px 3px rgba(0,0,0,0.8);pointer-events:none;font-family:'DM Mono',monospace;letter-spacing:-0.02em">${pct.toFixed(0)}%</span>` : '';
-    html += `<div class="bar-seg" style="width:${pct}%;background:${g.color};position:relative" data-tip="${g.label}: ${pct.toFixed(1)}% (${fmt(m)} m)">${label}</div>`;
+    const labelHtml = pct >= 6 ? `<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;text-shadow:0 0 4px rgba(0,0,0,0.9),0 1px 3px rgba(0,0,0,0.8);pointer-events:none;font-family:'DM Mono',monospace;letter-spacing:-0.02em">${pct.toFixed(0)}%</span>` : '';
+    html += `<div class="bar-seg" style="width:${pct}%;background:${g.color};position:relative" data-tip="${g.label}: ${pct.toFixed(1)}% (${fmt(m)} m)">${labelHtml}</div>`;
   });
+  // Poi il grigio a destra
+  const gGrigio = STATI_GRUPPI.find(x => x.label === GRIGIO_LABEL);
+  if (gGrigio) {
+    const m = gruppiMap[GRIGIO_LABEL] || 0;
+    if (m > 0) {
+      const pct = totale > 0 ? m / totale * 100 : 0;
+      const labelHtml = pct >= 6 ? `<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;text-shadow:0 0 4px rgba(0,0,0,0.9),0 1px 3px rgba(0,0,0,0.8);pointer-events:none;font-family:'DM Mono',monospace;letter-spacing:-0.02em">${pct.toFixed(0)}%</span>` : '';
+      html += `<div class="bar-seg" style="width:${pct}%;background:${gGrigio.color};position:relative" data-tip="${GRIGIO_LABEL}: ${pct.toFixed(1)}% (${fmt(m)} m)">${labelHtml}</div>`;
+    }
+  }
   return html;
 }
 const CSV_URL = 'dati.csv';
@@ -864,15 +885,8 @@ function stampaCluster() {
     }
   `;
   document.head.appendChild(style);
-  // Sposta temporaneamente cluster dentro .main
-  const clusterSection = document.getElementById('clusterSection');
-  const main = document.querySelector('.main');
-  const clusterParent = clusterSection.parentNode;
-  const clusterNext = clusterSection.nextSibling;
-  main.appendChild(clusterSection);
   setTimeout(() => {
     window.print();
-    clusterParent.insertBefore(clusterSection, clusterNext);
     document.head.removeChild(style);
   }, 400);
 }
