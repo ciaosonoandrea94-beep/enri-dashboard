@@ -66,7 +66,7 @@
   /* Modal dettaglio lotto */
   .modal-overlay { position:fixed;inset:0;background:#000a;z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.2s; }
   .modal-overlay.open { opacity:1;pointer-events:all; }
-  .modal { background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;width:520px;max-width:90vw;transform:translateY(20px);transition:transform 0.2s; }
+  .modal { background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;width:1040px;max-width:96vw;transform:translateY(20px);transition:transform 0.2s; }
   .modal-overlay.open .modal { transform:translateY(0); }
   .modal-title { font-size:16px;font-weight:600;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between; }
   .modal-close { cursor:pointer;color:var(--muted);font-size:22px;line-height:1; }
@@ -476,8 +476,6 @@ async function loadCluster() {
     const iLOT  = findCol('LOTTO');
     const iPRAT = findCol('PRATICA');
     const iENTE = findCol('ENTE');
-    const iSAUT = findCol('STATO_AUTORIZZAZIONE', 'STATO_LEGENDA', 'STATO_AUTORIZZAZIONE_WEB');
-    const iTRAT = findCol('TRATTA_ID');
 
     if (iC === -1 || iL === -1) {
       throw new Error(`Colonne non trovate. Headers: ${headers.join(', ')}`);
@@ -487,8 +485,7 @@ async function loadCluster() {
     const clTot = {};
     const comuniKm = {};         // { COMUNE: km_totali }
     const comuniKmPerLotto = {}; // { LOTTO: { COMUNE: km } }
-    // { LOTTO: [ { codice, stato, ente, metri } ] }
-    const praticheDetailPerLotto = {};
+    const praticheDetailPerLotto = {}; // { LOTTO: { codice: { codice, stato, ente, metri } } }
 
     for (let i = 1; i < lines.length; i++) {
       const cols = splitLine(lines[i]);
@@ -529,7 +526,6 @@ async function loadCluster() {
         const ente       = iENTE !== -1 ? (cols[iENTE]?.trim() || '') : '';
         if (praticaRaw && praticaRaw !== '' && lotto) {
           if (!praticheDetailPerLotto[lotto]) praticheDetailPerLotto[lotto] = {};
-          // ogni codice pratica è univoco per lotto
           praticaRaw.split('|').map(p => p.trim()).filter(p => p).forEach(codice => {
             if (!praticheDetailPerLotto[lotto][codice]) {
               praticheDetailPerLotto[lotto][codice] = { codice, stato, ente, metri: 0 };
@@ -542,7 +538,6 @@ async function loadCluster() {
 
     window._comuniKm = comuniKm;
     window._comuniKmPerLotto = comuniKmPerLotto;
-    // Converti in array ordinato per codice
     window._praticheDetailPerLotto = {};
     Object.entries(praticheDetailPerLotto).forEach(([lot, map]) => {
       window._praticheDetailPerLotto[lot] = Object.values(map).sort((a,b) => a.codice.localeCompare(b.codice));
@@ -636,11 +631,45 @@ function openModal(lotto, statiMetri, totale) {
     </div>` : ''}
   `;
 
+  // Layout a due colonne: barre sinistra + pratiche destra
+  const allPrats = (window._praticheDetailPerLotto || {})[lotto] || [];
+  const statiColori = {
+    'IN ATTESA':'#4a4f6a','IN REDAZIONE':'#4a4f6a','IN REDAZIONE INTEGRAZIONE':'#4a4f6a',
+    'IN FIRMA RDS':'#e07b3a','INVIATO':'#4f8ef7','PROTOCOLLATO':'#4f8ef7',
+    'NECESSARIA INTEGRAZIONE':'#cc3333','PROTOCOLLATO INTEGRAZIONE':'#548235','OTTENUTO':'#3a8c5c'
+  };
+
+  // Pannello pratiche HTML
+  let pratHtml = '';
+  if (allPrats.length > 0) {
+    pratHtml = `<div style="width:340px;flex-shrink:0;border-left:1px solid var(--border);padding-left:20px;">
+      <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">
+        Dettaglio pratiche (${allPrats.length})
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0">`;
+    allPrats.forEach((p, idx) => {
+      const col = statiColori[p.stato] || '#6b7080';
+      const borderB = idx < allPrats.length-1 ? 'border-bottom:1px solid #2e334722;' : '';
+      pratHtml += `<div style="display:flex;align-items:center;gap:6px;padding:5px 0;${borderB}flex-wrap:nowrap;min-width:0">
+        <span style="font-family:'DM Mono',monospace;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 7px;flex-shrink:0">${p.codice}</span>
+        <span style="font-size:9px;font-weight:600;color:${col};flex-shrink:0;white-space:nowrap">${p.stato}</span>
+        <span style="font-size:9px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right">${p.ente ? p.ente+' · ' : ''}${fmt(p.metri)} m</span>
+      </div>`;
+    });
+    pratHtml += `</div></div>`;
+  }
+
+  // Wrapper due colonne
+  body.innerHTML += `<div style="display:flex;gap:20px;align-items:flex-start;margin-top:4px">
+    <div style="flex:1;min-width:0">`;
+
   // Barre per gruppo con delta
   STATI_GRUPPI.forEach(g => {
     const m = g.stati.reduce((s, st) => s + (statiMetri[st] || 0), 0);
     if (!m) return;
     const pct = totale > 0 ? m/totale*100 : 0;
+    const nPratG = new Set(allPrats.filter(p => g.stati.includes(p.stato)).map(p => p.codice)).size;
+    const nLabel = nPratG > 0 ? ` <span style="font-size:9px;color:var(--muted)">· ${nPratG} prat.</span>` : '';
 
     let deltaHtml = '';
     if (prevLotto !== null) {
@@ -651,52 +680,15 @@ function openModal(lotto, statiMetri, totale) {
       else deltaHtml = `<span style="color:var(--muted);font-size:9px">= invariato</span>`;
     }
 
-    // Conta pratiche distinte in questo gruppo di stati per questo lotto
-    const lotPrats = (window._praticheDetailPerLotto || {})[lotto] || [];
-    const nPratGruppo = new Set(
-      lotPrats.filter(p => g.stati.includes(p.stato)).map(p => p.codice)
-    ).size;
-    const nPratLabel = nPratGruppo > 0
-      ? `<span style="font-size:9px;color:var(--muted);margin-left:4px">(${nPratGruppo} prat.)</span>`
-      : '';
-
     body.innerHTML += `
       <div class="modal-bar-row">
         <span class="modal-bar-label">${g.label}</span>
         <div class="modal-bar-track"><div class="modal-bar-fill" style="width:${pct}%;background:${g.color}"></div></div>
-        <span class="modal-bar-val" style="color:${g.color}">${fmt(m)} m ${nPratLabel} ${deltaHtml}</span>
+        <span class="modal-bar-val" style="color:${g.color}">${fmt(m)} m ${pct.toFixed(1)}%${nLabel} ${deltaHtml}</span>
       </div>`;
   });
 
-  // Sezione dettaglio pratiche
-  const allPrats = (window._praticheDetailPerLotto || {})[lotto] || [];
-  if (allPrats.length > 0) {
-    const statiColori = {
-      'IN ATTESA': '#4a4f6a', 'IN REDAZIONE': '#4a4f6a',
-      'IN FIRMA RDS': '#e07b3a', 'INVIATO': '#4f8ef7',
-      'PROTOCOLLATO': '#4f8ef7', 'NECESSARIA INTEGRAZIONE': '#cc3333',
-      'IN REDAZIONE INTEGRAZIONE': '#4a4f6a',
-      'PROTOCOLLATO INTEGRAZIONE': '#548235', 'OTTENUTO': '#3a8c5c'
-    };
-    let pratHtml = `
-      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
-        <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:10px">
-          Dettaglio pratiche (${allPrats.length})
-        </div>`;
-    allPrats.forEach(p => {
-      const col = statiColori[p.stato] || '#6b7080';
-      const enteStr = p.ente ? `<span style="color:var(--muted);margin-left:8px;font-size:10px">${p.ente}</span>` : '';
-      pratHtml += `
-        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #2e334722;flex-wrap:wrap">
-          <span style="font-family:'DM Mono',monospace;font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 8px;flex-shrink:0">${p.codice}</span>
-          <span style="font-size:10px;font-weight:600;color:${col};flex-shrink:0">${p.stato}</span>
-          ${enteStr}
-          <span style="margin-left:auto;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);flex-shrink:0">${fmt(p.metri)} m</span>
-        </div>`;
-    });
-    pratHtml += `</div>`;
-    body.innerHTML += pratHtml;
-  }
+  body.innerHTML += `</div>${pratHtml}</div>`;
 
   // Milestone del lotto
   const lista = MILESTONES_PER_LOTTO[lotto];
@@ -1226,19 +1218,16 @@ function renderDashboard(data, prevSnapshot=null) {
     protint:      ['PROTOCOLLATO INTEGRAZIONE'],
     ottenuto:     ['OTTENUTO']
   };
-  // Costruisci mappa: stato → set di codici pratica (per conteggio KPI)
+  // Conta pratiche distinte per stato (da _praticheDetailPerLotto)
   const pratichePerStato = {};
   if (window._praticheDetailPerLotto) {
     Object.values(window._praticheDetailPerLotto).forEach(arr => {
       arr.forEach(p => {
-        // mappa ogni codice al suo stato (es. "AUT/1/1A" -> stato della riga)
         if (!pratichePerStato[p.stato]) pratichePerStato[p.stato] = new Set();
         pratichePerStato[p.stato].add(p.codice);
       });
     });
   }
-
-  // Funzione: conta pratiche distinte per un gruppo di stati
   const countPratiche = (stati) => {
     const s = new Set();
     stati.forEach(st => { if (pratichePerStato[st]) pratichePerStato[st].forEach(c => s.add(c)); });
@@ -1250,14 +1239,15 @@ function renderDashboard(data, prevSnapshot=null) {
     const pct=grandTotal>0?metri/grandTotal*100:0;
     document.getElementById('kpi-'+key).textContent=pct.toFixed(1)+'%';
 
-    // Conteggio pratiche distinte per questo gruppo di stati
+    // N° Pratiche nel label
     const nPrat = countPratiche(stati);
     const kpiLabel = document.querySelector('.kpi.'+key+' .kpi-label');
-    if (kpiLabel && nPrat > 0) {
-      // Preserva il testo originale senza duplicare il conteggio
-      const baseText = kpiLabel.getAttribute('data-base') || kpiLabel.textContent.replace(/\s*\(\d+\)$/, '').trim();
+    if (kpiLabel) {
+      const baseText = kpiLabel.getAttribute('data-base') || kpiLabel.textContent.replace(/\s*·.*$/, '').trim();
       kpiLabel.setAttribute('data-base', baseText);
-      kpiLabel.textContent = baseText + ' (' + nPrat + ')';
+      kpiLabel.innerHTML = baseText + (nPrat > 0
+        ? ` <span style="color:var(--text);font-weight:600">· N° Pratiche: ${nPrat}</span>`
+        : '');
     }
 
     // Delta rispetto a snapshot precedente
