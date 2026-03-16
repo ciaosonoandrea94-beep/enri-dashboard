@@ -382,8 +382,9 @@ function renderBarre(gruppiMap, totale, tooltip, onHover) {
   }
   return html;
 }
-const CSV_URL = 'dati.csv';
+// dati.csv non più necessario — loadData legge da Riepilogo_progettazione.csv
 const RIEPILOGO_URL = 'Riepilogo_progettazione.csv';
+const RIEPILOGO_URL_FALLBACK = 'riepilogo.csv';
 const MASTER_URL = 'Master.csv';
 
 // ── HELPER GLOBALI ────────────────────────────────────────────────────────────
@@ -512,8 +513,9 @@ const IMPRESE_PER_LOTTO = {
 
 async function loadCluster() {
   try {
-    const resp = await fetch(RIEPILOGO_URL + '?t=' + Date.now());
-    if (!resp.ok) throw new Error('Riepilogo_progettazione.csv non trovato');
+    let resp = await fetch(RIEPILOGO_URL + '?t=' + Date.now());
+    if (!resp.ok) resp = await fetch(RIEPILOGO_URL_FALLBACK + '?t=' + Date.now());
+    if (!resp.ok) throw new Error('File riepilogo non trovato — carica Riepilogo_progettazione.csv o riepilogo.csv su GitHub');
     const text = await resp.text();
     const lines = text.trim().split('\n').map(l => l.replace(/\r/,''));
 
@@ -1159,33 +1161,63 @@ async function loadData(saveSnapshot = false) {
     const tid = setTimeout(() => controller.abort(), 15000);
     let resp;
     try {
-      resp = await fetch(CSV_URL + '?t=' + Date.now(), { signal: controller.signal });
+      resp = await fetch(RIEPILOGO_URL + '?t=' + Date.now(), { signal: controller.signal });
+      if (!resp.ok) resp = await fetch(RIEPILOGO_URL_FALLBACK + '?t=' + Date.now(), { signal: controller.signal });
       clearTimeout(tid);
     } catch(fetchErr) {
       clearTimeout(tid);
       throw new Error(controller.signal.aborted
-        ? 'Timeout: dati.csv non risponde (carica il file su GitHub Pages)'
-        : 'Impossibile caricare dati.csv — verifica che il file sia su GitHub Pages');
+        ? 'Timeout: file riepilogo non risponde'
+        : 'Impossibile caricare il file riepilogo CSV');
     }
-    if (!resp.ok) throw new Error('File dati.csv non trovato (HTTP ' + resp.status + ').');
+    if (!resp.ok) throw new Error('File riepilogo non trovato — carica Riepilogo_progettazione.csv su GitHub (HTTP ' + resp.status + ').');
     const text = await resp.text();
     setLoading(70);
+    // Aggrega da Riepilogo_progettazione.csv (stessa fonte dei cluster → totali coerenti)
     const lines = text.trim().split('\n').map(l => l.replace(/\r/,''));
-    const headers = lines[0].split(';');
-    const iL=headers.indexOf('LOTTO'), iS=headers.indexOf('STATO_AUTORIZZAZIONE');
-    const iM=headers.indexOf('Metri'), iT=headers.indexOf('TotaleMetri'), iP=headers.indexOf('Percentuale');
-    const data = [];
-    for (let i=1;i<lines.length;i++) {
-      const cols = lines[i].split(';');
-      if (!cols[iL]) continue;
-      data.push({
-        lotto: cols[iL].trim(),
-        stato: cols[iS].trim(),
-        metri: parseNum(cols[iM]),
-        totale: parseNum(cols[iT]),
-        pct: parsePct(cols[iP])
-      });
+    const sep = lines[0].includes(';') ? ';' : ',';
+    const splitLine = (line) => {
+      const res = []; let cur = '', inQ = false;
+      for (const ch of line) {
+        if (ch === '"') { inQ = !inQ; }
+        else if (ch === sep && !inQ) { res.push(cur.trim()); cur = ''; }
+        else { cur += ch; }
+      }
+      res.push(cur.trim()); return res;
+    };
+    const headers = splitLine(lines[0]);
+    const findC = (...names) => { for(const n of names){ const i=headers.findIndex(h=>h.trim().toUpperCase()===n.toUpperCase()); if(i>=0) return i; } return -1; };
+    const iL   = findC('LOTTO');
+    const iS   = findC('STATO_LEGENDA','STATO_AUTORIZZAZIONE_WEB','STATO_AUTORIZZAZIONE');
+    const iLun = findC('LUNGHEZZA','LENGTH');
+
+    // Aggrega per lotto+stato
+    const aggMap = {};  // { lotto: { stato: metri } }
+    const totMap = {};  // { lotto: totale }
+    for (let i=1; i<lines.length; i++) {
+      const cols = splitLine(lines[i]);
+      const lotto = cols[iL]?.trim().replace(/"/g,'');
+      if (!lotto) continue;
+      const stato = (iS>=0 ? cols[iS]?.trim() : '') || 'IN ATTESA';
+      const lunghRaw = (cols[iLun]||'0').trim();
+      let lungh = 0;
+      if (lunghRaw.includes(',') && !lunghRaw.includes('.')) lungh = parseFloat(lunghRaw.replace(',','.')) || 0;
+      else if (lunghRaw.includes(',')) lungh = parseFloat(lunghRaw.replace(/\./g,'').replace(',','.')) || 0;
+      else lungh = parseFloat(lunghRaw) || 0;
+      if (lungh <= 0) continue;
+      if (!aggMap[lotto]) { aggMap[lotto] = {}; totMap[lotto] = 0; }
+      aggMap[lotto][stato] = (aggMap[lotto][stato] || 0) + lungh;
+      totMap[lotto] += lungh;
     }
+
+    // Converti in formato atteso da renderDashboard
+    const data = [];
+    Object.entries(aggMap).forEach(([lotto, stati]) => {
+      const totale = totMap[lotto];
+      Object.entries(stati).forEach(([stato, metri]) => {
+        data.push({ lotto, stato, metri, totale, pct: totale > 0 ? metri/totale : 0 });
+      });
+    });
 
     // ── Storico condiviso via JSONBin ──────────────────────────────────────
     let storageRecord = { storico: [] };
