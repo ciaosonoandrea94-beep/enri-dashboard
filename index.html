@@ -408,10 +408,22 @@ function fmtDateIT(s) {
 
 function buildPratCard(p) {
   const col = STATI_COLORI_MAP[p.stato] || '#6b7080';
-  const dateStr = [
-    p.dr  ? 'Invio: ' + fmtDateIT(p.dr)  : '',
-    p.dum ? 'Agg.: '  + fmtDateIT(p.dum) : ''
-  ].filter(Boolean).join(' · ');
+  // Logica date in base allo stato:
+  // INVIATO: solo data invio (dr = DATA_RICHIESTA)
+  // PROTOCOLLATO: data invio (dr_invio o dr) + data protocollo (dum)
+  // altri: data invio + data ultimo aggiornamento
+  let dateParts = [];
+  if (p.stato === 'INVIATO') {
+    if (p.dr) dateParts.push('Invio: ' + fmtDateIT(p.dr));
+  } else if (p.stato === 'PROTOCOLLATO' || p.stato === 'PROTOCOLLATO INTEGRAZIONE') {
+    const invioDate = p.dr_invio || p.dr;
+    if (invioDate) dateParts.push('Invio: ' + fmtDateIT(invioDate));
+    if (p.dum)     dateParts.push('Prot.: ' + fmtDateIT(p.dum));
+  } else {
+    if (p.dr)  dateParts.push('Invio: ' + fmtDateIT(p.dr));
+    if (p.dum) dateParts.push('Agg.: '  + fmtDateIT(p.dum));
+  }
+  const dateStr = dateParts.join(' · ');
   return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:5px">
     <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:nowrap">
       <span style="font-family:'DM Mono',monospace;font-size:10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 7px;flex-shrink:0">${p.codice}</span>
@@ -726,10 +738,18 @@ function openModal(lotto, statiMetri, totale) {
   // Costruisce una card pratica
   const pratCard = (p) => {
     const col = STATI_COLORI_MAP[p.stato] || '#6b7080';
-    const drStr  = fmtDateIT(p.dr);
-    const dumStr = fmtDateIT(p.dum);
-    const dateStr = [drStr ? 'Invio: '+drStr : '', dumStr ? 'Agg.: '+dumStr : '']
-      .filter(Boolean).join('  ·  ');
+    let dateParts = [];
+    if (p.stato === 'INVIATO') {
+      if (p.dr) dateParts.push('Invio: ' + fmtDateIT(p.dr));
+    } else if (p.stato === 'PROTOCOLLATO' || p.stato === 'PROTOCOLLATO INTEGRAZIONE') {
+      const invioDate = p.dr_invio || p.dr;
+      if (invioDate) dateParts.push('Invio: ' + fmtDateIT(invioDate));
+      if (p.dum)     dateParts.push('Prot.: ' + fmtDateIT(p.dum));
+    } else {
+      if (p.dr)  dateParts.push('Invio: ' + fmtDateIT(p.dr));
+      if (p.dum) dateParts.push('Agg.: '  + fmtDateIT(p.dum));
+    }
+    const dateStr = dateParts.join('  ·  ');
     return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;display:flex;flex-direction:column;gap:4px">
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap">
         <span style="font-family:'DM Mono',monospace;font-size:10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 7px;flex-shrink:0">${p.codice}</span>
@@ -866,7 +886,18 @@ function openModalCluster(cl, statiMap, totale) {
 
   const pratCard = (p) => {
     const col = STATI_COLORI_MAP[p.stato] || '#6b7080';
-    const dateStr = [p.dr?'Invio: '+fmtDateIT(p.dr):'', p.dum?'Agg.: '+fmtDateIT(p.dum):''].filter(Boolean).join(' · ');
+    let _dp2 = [];
+    if (p.stato === 'INVIATO') {
+      if (p.dr) _dp2.push('Invio: ' + fmtDateIT(p.dr));
+    } else if (p.stato === 'PROTOCOLLATO' || p.stato === 'PROTOCOLLATO INTEGRAZIONE') {
+      const _di = p.dr_invio || p.dr;
+      if (_di)   _dp2.push('Invio: ' + fmtDateIT(_di));
+      if (p.dum) _dp2.push('Prot.: ' + fmtDateIT(p.dum));
+    } else {
+      if (p.dr)  _dp2.push('Invio: ' + fmtDateIT(p.dr));
+      if (p.dum) _dp2.push('Agg.: '  + fmtDateIT(p.dum));
+    }
+    const dateStr = _dp2.join(' · ');
     return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:5px">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
         <span style="font-family:'DM Mono',monospace;font-size:10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 7px;flex-shrink:0">${p.codice}</span>
@@ -2608,8 +2639,21 @@ async function loadMaster() {
       const dumDate = parseDateIT(dum);
       const exDate  = existing ? parseDateIT(existing.dum) : null;
 
-      if (!existing || (dumDate && (!exDate || dumDate >= exDate))) {
-        permessiMap[key] = { tratta, prat, tipo, stato, ente, dr, dum, lungh, lotto };
+      if (!existing) {
+        // Prima riga: salva tutto incluso dr_invio se è INVIATO
+        permessiMap[key] = {
+          tratta, prat, tipo, stato, ente, dr, dum, lungh, lotto,
+          dr_invio: stato === 'INVIATO' ? dr : ''
+        };
+      } else if (dumDate && (!exDate || dumDate >= exDate)) {
+        // Riga più recente: aggiorna stato/ente/dum ma preserva dr_invio se già noto
+        const dr_invio = existing.dr_invio
+          || (stato === 'INVIATO' ? dr : '')
+          || (existing.stato === 'INVIATO' ? existing.dr : '');
+        permessiMap[key] = { tratta, prat, tipo, stato, ente, dr, dum, lungh, lotto, dr_invio };
+      } else if (stato === 'INVIATO' && !existing.dr_invio) {
+        // Riga più vecchia ma è INVIATO: salva solo dr_invio
+        existing.dr_invio = dr;
       }
     }
 
@@ -2633,7 +2677,7 @@ async function loadMaster() {
       if (!praticheByLotto[lotto][codice]) {
         praticheByLotto[lotto][codice] = {
           codice, tipo: r.tipo, stato: r.stato, ente: r.ente,
-          dr: r.dr, dum: r.dum, metri: 0, lotto
+          dr: r.dr, dum: r.dum, dr_invio: r.dr_invio || '', metri: 0, lotto
         };
       }
       praticheByLotto[lotto][codice].metri += r.lungh;
@@ -2647,6 +2691,8 @@ async function loadMaster() {
         existing.dr    = r.dr;
         existing.dum   = r.dum;
       }
+      // Preserva sempre dr_invio se disponibile
+      if (r.dr_invio && !existing.dr_invio) existing.dr_invio = r.dr_invio;
     });
 
     window._praticheDetailPerLotto = {};
@@ -2670,7 +2716,7 @@ async function loadMaster() {
       if (!window._masterByTratta[r.tratta].find(x => x.codice === codice)) {
         window._masterByTratta[r.tratta].push({
           codice, tipo: r.tipo, stato: r.stato, ente: r.ente,
-          dr: r.dr, dum: r.dum, metri: r.lungh, lotto
+          dr: r.dr, dum: r.dum, dr_invio: r.dr_invio || '', metri: r.lungh, lotto
         });
       }
     });
