@@ -273,10 +273,6 @@
           <div style="width:90px;flex-shrink:0"></div>
           <div style="flex:1"></div>
           <div style="width:38px;flex-shrink:0"></div>
-          <div class="bar-ms-wrap" style="background:transparent;border:none;padding:0">
-            <div style="font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#4aaa6a;text-align:center;white-space:nowrap">📅 Invio Perm.</div>
-            <div style="font-size:8px;color:var(--muted);text-align:center">Scadenza</div>
-          </div>
         </div>
         <div class="chart-wrap" id="chartWrap"></div>
       </div>
@@ -1119,6 +1115,8 @@ function getMilestoneForLotto(lotto) {
 }
 
 function getMilestonesHtml(lotto) {
+  const LOTTI_ATTIVI = ['1A','1B','2A','2B'];
+  if (LOTTI_ATTIVI.includes(lotto)) return ''; // nessuna milestone Invio Permessi per lotti attivi
   const lista = MILESTONES_PER_LOTTO[lotto];
   if (!lista || !lista.length) return '';
   const ms = lista[0];
@@ -1229,6 +1227,12 @@ function renderDashboard(data, prevSnapshot=null) {
         <div style="flex:1;display:flex;align-items:center;gap:8px">
           <span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);white-space:nowrap;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 8px">🔜 Lotti in Avvio</span>
           <div style="flex:1;height:1px;background:linear-gradient(to right,#6b708055,transparent)"></div>
+        </div>
+        <span style="width:38px;flex-shrink:0"></span>
+        <span style="min-width:62px;flex-shrink:0"></span>
+        <div class="bar-ms-wrap" style="justify-content:flex-end">
+          <span style="font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#4aaa6a;white-space:nowrap">📅 Invio Perm.</span>
+          <span style="font-size:8px;color:var(--muted)">Scadenza</span>
         </div>`;
       wrap.appendChild(sepFuturi);
     }
@@ -1319,9 +1323,17 @@ function renderDonut(globalStati, grandTotal) {
   const grouped = [];
   const inativoMetri = STATI_INATTIVI.reduce((s,st) => s + (globalStati[st]||0), 0);
   if (inativoMetri > 0) grouped.push({ label: 'In Attesa / Redazione', metri: inativoMetri, color: '#4a4f6a' });
+  const STATO_LABELS = {
+    'IN FIRMA RDS':              'In Verifica / In Firma',
+    'INVIATO':                   'Inviato',
+    'PROTOCOLLATO':              'Protocollato',
+    'NECESSARIA INTEGRAZIONE':   'Necessaria Integrazione',
+    'PROTOCOLLATO INTEGRAZIONE': 'Protocollato Integrazione',
+    'OTTENUTO':                  'Ottenuto',
+  };
   ['IN FIRMA RDS','INVIATO','PROTOCOLLATO','NECESSARIA INTEGRAZIONE','PROTOCOLLATO INTEGRAZIONE','OTTENUTO'].forEach(s => {
     const m = globalStati[s] || 0;
-    if (m > 0) grouped.push({ label: s.replace('IN ',''), metri: m, color: COLORS[s] });
+    if (m > 0) grouped.push({ label: STATO_LABELS[s] || s, metri: m, color: COLORS[s] });
   });
 
   ctx.clearRect(0, 0, 200, 200);
