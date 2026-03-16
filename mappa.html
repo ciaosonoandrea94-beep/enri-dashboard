@@ -122,6 +122,25 @@
     .legend{display:none;}
     .stats-bar{flex-wrap:wrap;}
   }
+
+  /* Search bar */
+  .search-bar{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:1000;display:flex;gap:6px;width:min(480px,calc(100vw - 340px));}
+  .search-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--text);font-family:'DM Sans',sans-serif;outline:none;transition:border-color 0.2s;}
+  .search-input:focus{border-color:var(--accent);}
+  .search-input::placeholder{color:var(--muted);}
+  .search-btn{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--muted);cursor:pointer;font-size:12px;white-space:nowrap;font-family:'DM Sans',sans-serif;transition:all 0.2s;}
+  .search-btn:hover{border-color:var(--accent);color:var(--text);}
+  .search-results{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;box-shadow:0 8px 24px #0006;display:none;max-height:280px;overflow-y:auto;}
+  .search-result-item{padding:9px 14px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:8px;border-bottom:1px solid #2e334718;transition:background 0.15s;}
+  .search-result-item:last-child{border-bottom:none;}
+  .search-result-item:hover{background:var(--surface2);}
+  .search-result-icon{font-size:13px;flex-shrink:0;}
+  .search-result-main{font-weight:600;color:var(--text);}
+  .search-result-sub{color:var(--muted);font-size:10px;margin-top:1px;}
+  .search-divider{padding:5px 14px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--border);}
+  .search-highlight{position:relative;}
+  @media(max-width:768px){.search-bar{width:calc(100% - 24px);top:8px;}}
+  @media print{.search-bar{display:none!important;}}
 </style>
 </head>
 <body>
@@ -139,6 +158,17 @@
 <div class="wrap">
   <div id="loadingOverlay"><div class="spinner"></div><div class="loading-text">Caricamento tracciati...</div></div>
   <div id="map"></div>
+
+  <!-- Search bar -->
+  <div class="search-bar" id="searchBar">
+    <div style="position:relative;flex:1">
+      <input class="search-input" id="searchInput" type="text"
+        placeholder="🔍  Cerca indirizzo o pratica (es. AUT/2/1B)..."
+        autocomplete="off" spellcheck="false">
+      <div class="search-results" id="searchResults"></div>
+    </div>
+    <button class="search-btn" id="clearSearchBtn" onclick="clearSearch()" style="display:none">✕</button>
+  </div>
   <div class="stats-bar" id="statsBar"></div>
   <div class="sidebar">
     <div class="sidebar-head">
@@ -164,6 +194,7 @@ const STATO_COLORS = {
   'IN FIRMA RDS':'#e07b3a','INVIATO':'#4f8ef7','PROTOCOLLATO':'#4f8ef7',
   'NECESSARIA INTEGRAZIONE':'#cc3333','PROTOCOLLATO INTEGRAZIONE':'#548235','OTTENUTO':'#3a8c5c'
 };
+window.STATO_COLORS = STATO_COLORS;
 const IMPRESE = {'1A':'Valtellina','1B':'Soleto','2A':'Sielte','2B':'Telebit'};
 const LOTTO_ORDER = ['1A','1B','2A','2B','1','2','3','4','5','6','7','8'];
 const LOTTI_ATTIVI = ['1A','1B','2A','2B'];
@@ -377,10 +408,178 @@ function buildStatsBar(stats, features) {
   });
 }
 
+
+// ── RICERCA: indirizzo + pratica ─────────────────────────────────────────────
+let allFeatures = [];         // popolato dopo caricamento GeoJSON
+let searchTimer = null;
+let searchMarker = null;
+const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
+
+const inputEl   = document.getElementById('searchInput');
+const resultsEl = document.getElementById('searchResults');
+const clearBtn  = document.getElementById('clearSearchBtn');
+
+function clearSearch() {
+  inputEl.value = '';
+  resultsEl.style.display = 'none';
+  clearBtn.style.display = 'none';
+  if (searchMarker) { map.removeLayer(searchMarker); searchMarker = null; }
+}
+
+// Cerca pratiche nel dataset GeoJSON
+function searchPratiche(query) {
+  const q = query.trim().toUpperCase();
+  if (!q) return [];
+  const results = [];
+  const seen = new Set();
+  allFeatures.forEach(f => {
+    const p = f.properties;
+    const pratica = (p.PRATICA || '').toUpperCase();
+    const tratta  = (p.TRATTA_ID || '').toUpperCase();
+    // Cerca per codice pratica o tratta ID
+    if (pratica.includes(q) || tratta.includes(q)) {
+      const key = pratica + '|' + tratta;
+      if (!seen.has(key)) {
+        seen.add(key);
+        results.push({ type: 'pratica', feature: f, pratica: p.PRATICA||tratta, tratta: p.TRATTA_ID, lotto: p.LOTTO, stato: p.STATO_LEGENDA||p.STATO_AUTORIZZAZIONE||'', comune: p.COMUNE||'' });
+      }
+    }
+  });
+  return results.slice(0, 8);
+}
+
+// Geocoding Nominatim
+async function searchAddress(query) {
+  const url = `${NOMINATIM}?q=${encodeURIComponent(query + ', Italia')}&format=json&limit=4&addressdetails=1`;
+  try {
+    const resp = await fetch(url, { headers: { 'Accept-Language': 'it' } });
+    const data = await resp.json();
+    return data.map(r => ({
+      type: 'address',
+      display: r.display_name.split(',').slice(0,3).join(', '),
+      lat: parseFloat(r.lat), lon: parseFloat(r.lon),
+      zoom: r.type === 'city' ? 13 : r.type === 'suburb' ? 14 : 16
+    }));
+  } catch { return []; }
+}
+
+function renderResults(pratiche, addresses, query) {
+  resultsEl.innerHTML = '';
+  let hasAny = false;
+
+  if (pratiche.length) {
+    hasAny = true;
+    const div = document.createElement('div');
+    div.className = 'search-divider';
+    div.textContent = 'Pratiche e Tratte';
+    resultsEl.appendChild(div);
+    pratiche.forEach(r => {
+      const item = document.createElement('div');
+      item.className = 'search-result-item';
+      const color = (window.STATO_COLORS||{})[r.stato] || '#6b7080';
+      item.innerHTML = `
+        <span class="search-result-icon">📋</span>
+        <div style="flex:1;min-width:0">
+          <div class="search-result-main">${r.pratica}</div>
+          <div class="search-result-sub">${r.tratta} · Lotto ${r.lotto} · ${r.comune}</div>
+        </div>
+        <span style="font-size:9px;color:${color};white-space:nowrap;flex-shrink:0">${r.stato}</span>`;
+      item.onclick = () => zoomToFeature(r.feature);
+      resultsEl.appendChild(item);
+    });
+  }
+
+  if (addresses.length) {
+    hasAny = true;
+    const div = document.createElement('div');
+    div.className = 'search-divider';
+    div.textContent = 'Indirizzi';
+    resultsEl.appendChild(div);
+    addresses.forEach(r => {
+      const item = document.createElement('div');
+      item.className = 'search-result-item';
+      item.innerHTML = `
+        <span class="search-result-icon">📍</span>
+        <div style="flex:1;min-width:0">
+          <div class="search-result-main">${r.display}</div>
+        </div>`;
+      item.onclick = () => {
+        map.setView([r.lat, r.lon], r.zoom);
+        if (searchMarker) map.removeLayer(searchMarker);
+        searchMarker = L.circleMarker([r.lat, r.lon], {
+          radius: 8, color: '#4f8ef7', fillColor: '#4f8ef7', fillOpacity: 0.8, weight: 2
+        }).addTo(map).bindPopup(`<div style="font-size:12px;color:#e8eaf0;padding:4px">${r.display}</div>`).openPopup();
+        resultsEl.style.display = 'none';
+        clearBtn.style.display = 'block';
+      };
+      resultsEl.appendChild(item);
+    });
+  }
+
+  if (!hasAny) {
+    const item = document.createElement('div');
+    item.className = 'search-result-item';
+    item.innerHTML = `<span style="color:var(--muted);font-size:11px">Nessun risultato per "${query}"</span>`;
+    resultsEl.appendChild(item);
+  }
+
+  resultsEl.style.display = 'block';
+}
+
+function zoomToFeature(feature) {
+  // Trova il layer corrispondente
+  let targetLayer = null;
+  allLayers.forEach(({layer}) => {
+    layer.eachLayer(l => {
+      if (l.feature === feature) targetLayer = l;
+    });
+  });
+  if (targetLayer) {
+    const bounds = targetLayer.getBounds ? targetLayer.getBounds() : null;
+    const latlng = bounds ? bounds.getCenter() : targetLayer.getLatLng?.();
+    if (latlng) {
+      map.setView(latlng, 15);
+      targetLayer.openPopup();
+      // Evidenzia la tratta
+      const origStyle = { weight: 4, opacity: 0.95 };
+      targetLayer.setStyle({ weight: 8, opacity: 1, color: '#fff' });
+      setTimeout(() => targetLayer.setStyle({ ...origStyle, color: (window.STATO_COLORS||{})[feature.properties.STATO_LEGENDA||feature.properties.STATO_AUTORIZZAZIONE]||'#4a4f6a' }), 2000);
+    }
+  }
+  resultsEl.style.display = 'none';
+  clearBtn.style.display = 'block';
+}
+
+// Debounced input handler
+inputEl.addEventListener('input', () => {
+  const q = inputEl.value.trim();
+  clearBtn.style.display = q ? 'block' : 'none';
+  if (!q) { resultsEl.style.display = 'none'; return; }
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(async () => {
+    const pratiche = searchPratiche(q);
+    // Cerca indirizzo solo se query > 3 chars e non sembra un codice pratica
+    const looksLikePratica = /^(AUT|NO|ORD|TR_)/i.test(q);
+    const addresses = (!looksLikePratica && q.length > 3) ? await searchAddress(q) : [];
+    renderResults(pratiche, addresses, q);
+  }, 350);
+});
+
+inputEl.addEventListener('keydown', e => {
+  if (e.key === 'Escape') clearSearch();
+});
+
+// Chiudi dropdown cliccando fuori
+document.addEventListener('click', e => {
+  if (!e.target.closest('#searchBar')) resultsEl.style.display = 'none';
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
 (async()=>{
   try{
     const geojson=await loadGeoJSON();
     const features=geojson.features.filter(f=>f.properties.LOTTO!=='P');
+    allFeatures = features;  // per ricerca pratiche
     lottoStats=buildLottoStats(features);
 
     const lottoGroups={};
