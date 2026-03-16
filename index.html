@@ -819,93 +819,95 @@ function openModalCluster(cl, statiMap, totale) {
 
   // Pratiche associate alle tratte di questo cluster
   const clPrats = [];
-  if (window._praticheDetailPerLotto && window._clusterTrattaMap) {
+  if (window._clusterTrattaMap && window._masterByTratta) {
     const tratteCluster = new Set(window._clusterTrattaMap[cl] || []);
-    // Cerca in Master.csv le pratiche le cui tratte appartengono a questo cluster
-    if (window._masterByTratta) {
-      const seen = new Set();
-      tratteCluster.forEach(tratta => {
-        const rows = window._masterByTratta[tratta] || [];
-        rows.forEach(r => {
-          if (!seen.has(r.codice)) { seen.add(r.codice); clPrats.push(r); }
-        });
+    const seen = new Set();
+    tratteCluster.forEach(tratta => {
+      (window._masterByTratta[tratta] || []).forEach(r => {
+        if (!seen.has(r.codice)) { seen.add(r.codice); clPrats.push(r); }
       });
-      clPrats.sort((a,b) => {
-        const da = parseDateIT(a.dum), db = parseDateIT(b.dum);
-        if (da && db) return db - da;
-        if (da) return -1; if (db) return 1;
-        return a.codice.localeCompare(b.codice);
-      });
-    }
+    });
+    clPrats.sort((a,b) => {
+      const da = parseDateIT(a.dum), db = parseDateIT(b.dum);
+      if (da && db) return db - da;
+      if (da) return -1; if (db) return 1;
+      return a.codice.localeCompare(b.codice);
+    });
   }
 
-  // Header
-  let html = `<div style="display:flex;gap:24px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:flex-end">
-    <div>
-      <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted)">Totale Cluster ${cl}</div>
-      <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace">${fmt(totale)} m</div>
-    </div>
-    <div>
-      <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted)">🏆 Autorizzati</div>
-      <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:#3a8c5c">${fmt(ottenuto)} m <span style="font-size:15px">${pctOtt}%</span></div>
-    </div>
-  </div>`;
-
-  // Barre stati con % dentro
-  const gruppiMap = buildGruppiMap(statiMap);
-  html += `<div style="display:flex;gap:0;align-items:flex-start">
-    <div style="flex:0 0 340px;min-width:0;padding-right:20px">`;
-
-  STATI_GRUPPI.forEach(g => {
-    const m = g.stati.reduce((s, st) => s + (statiMap[st]||0), 0);
-    if (!m) return;
-    const pct = totale > 0 ? m/totale*100 : 0;
-    html += `<div class="modal-bar-row">
-      <span class="modal-bar-label">${g.label}</span>
-      <div class="modal-bar-track">
-        <div class="modal-bar-fill" style="width:${pct}%;background:${g.color}"></div>
-        <span class="modal-bar-pct">${pct >= 8 ? pct.toFixed(1)+'%' : ''}</span>
+  // Card pratica
+  const pratCard = (p) => {
+    const col = statiColori[p.stato] || '#6b7080';
+    const dumStr = fmtDate(p.dum);
+    const drStr  = fmtDate(p.dr);
+    const dateStr = [drStr?'Invio: '+drStr:'', dumStr?'Agg.: '+dumStr:''].filter(Boolean).join('  ·  ');
+    return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;display:flex;flex-direction:column;gap:4px;margin-bottom:5px">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap">
+        <span style="font-family:'DM Mono',monospace;font-size:10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 7px;flex-shrink:0">${p.codice}</span>
+        <span style="font-size:9px;font-weight:700;color:${col};flex-shrink:0;white-space:nowrap">${p.stato}</span>
+        <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text);margin-left:auto;flex-shrink:0">${fmt(p.metri)} m</span>
       </div>
-      <span class="modal-bar-val" style="color:${g.color}">${fmt(m)} m</span>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+        <span style="font-size:9px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.ente||''}</span>
+        ${dateStr?`<span style="font-size:9px;color:var(--muted);white-space:nowrap;flex-shrink:0">${dateStr}</span>`:''}
+      </div>
     </div>`;
-  });
+  };
 
-  html += `</div>`;
-
-  // Pannello pratiche cluster a due colonne
+  // Pannello pratiche a due colonne AUT | NO/ORD
+  let pratHtml = '';
   if (clPrats.length > 0) {
     const autPrats = clPrats.filter(p => p.codice.startsWith('AUT/'));
     const noPrats  = clPrats.filter(p => !p.codice.startsWith('AUT/'));
     const colTitle = (label, n) =>
       `<div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border)">${label} (${n})</div>`;
-    const pratCard = (p) => {
-      const col = statiColori[p.stato] || '#6b7080';
-      const drStr  = fmtDate(p.dr);
-      const dumStr = fmtDate(p.dum);
-      const dateStr = [drStr?'Invio: '+drStr:'', dumStr?'Agg.: '+dumStr:''].filter(Boolean).join('  ·  ');
-      return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;display:flex;flex-direction:column;gap:4px;margin-bottom:5px">
-        <div style="display:flex;align-items:center;gap:6px">
-          <span style="font-family:'DM Mono',monospace;font-size:10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 7px;flex-shrink:0">${p.codice}</span>
-          <span style="font-size:9px;font-weight:700;color:${col};flex-shrink:0;white-space:nowrap">${p.stato}</span>
-          <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text);margin-left:auto;flex-shrink:0">${fmt(p.metri)} m</span>
+    pratHtml = `
+      <div style="flex:1;min-width:0;padding-left:20px;border-left:1px solid var(--border)">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);font-weight:600">
+          Dettaglio pratiche (${clPrats.length})
         </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
-          <span style="font-size:9px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.ente||''}</span>
-          ${dateStr?`<span style="font-size:9px;color:var(--muted);white-space:nowrap;flex-shrink:0">${dateStr}</span>`:''}
+        <div style="display:grid;grid-template-columns:${noPrats.length>0?'1fr 1fr':'1fr'};gap:12px;align-items:start">
+          <div>${autPrats.length?colTitle('Autorizzazioni',autPrats.length):''}${autPrats.map(pratCard).join('')}</div>
+          ${noPrats.length?`<div>${colTitle('Nulla Osta / Ordinanze',noPrats.length)}${noPrats.map(pratCard).join('')}</div>`:''}
         </div>
       </div>`;
-    };
-    html += `<div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px">
-      <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:10px;font-weight:600">Dettaglio pratiche (${clPrats.length})</div>
-      <div style="display:grid;grid-template-columns:${noPrats.length>0?'1fr 1fr':'1fr'};gap:12px;align-items:start">
-        <div>${autPrats.length?colTitle('Autorizzazioni',autPrats.length):''}${autPrats.map(pratCard).join('')}</div>
-        ${noPrats.length?`<div>${colTitle('Nulla Osta / Ordinanze',noPrats.length)}${noPrats.map(pratCard).join('')}</div>`:''}
-      </div>
-    </div>`;
   }
 
-  html += `</div>`;
-  body.innerHTML = html;
+  // HTML finale: header + layout due colonne (barre | pratiche)
+  body.innerHTML = `
+    <div style="display:flex;gap:24px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:flex-end">
+      <div>
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted)">Totale Cluster ${cl}</div>
+        <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace">${fmt(totale)} m</div>
+      </div>
+      <div>
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted)">🏆 Autorizzati</div>
+        <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:#3a8c5c">${fmt(ottenuto)} m <span style="font-size:15px">${pctOtt}%</span></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:0;align-items:flex-start">
+      <div style="flex:0 0 320px;min-width:0;padding-right:20px">
+        ${STATI_GRUPPI.map(g => {
+          const m = g.stati.reduce((s,st) => s+(statiMap[st]||0), 0);
+          if (!m) return '';
+          const pct = totale > 0 ? m/totale*100 : 0;
+          const nPG = clPrats.filter(p => g.stati.includes(p.stato)).length;
+          const pctStr = pct >= 8 ? pct.toFixed(1)+'%' : '';
+          const nStr = nPG > 0 ? '('+nPG+')' : '';
+          const inside = [pctStr, nStr].filter(Boolean).join(' ');
+          return `<div class="modal-bar-row">
+            <span class="modal-bar-label">${g.label}</span>
+            <div class="modal-bar-track">
+              <div class="modal-bar-fill" style="width:${pct}%;background:${g.color}"></div>
+              <span class="modal-bar-pct">${inside}</span>
+            </div>
+            <span class="modal-bar-val" style="color:${g.color}">${fmt(m)} m</span>
+          </div>`;
+        }).join('')}
+      </div>
+      ${pratHtml}
+    </div>`;
+
   document.getElementById('modalClusterOverlay').classList.add('open');
 }
 
