@@ -76,7 +76,7 @@
   .modal-bar-track { flex:1;height:20px;background:var(--surface2);border-radius:4px;overflow:hidden;position:relative; }
   .modal-bar-fill { height:100%;border-radius:4px;transition:width 0.5s;position:relative; }
   .modal-bar-pct { position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:'DM Mono',monospace;color:#fff;text-shadow:0 0 4px rgba(0,0,0,0.8);pointer-events:none; }
-  .modal-bar-val { width:120px;text-align:right;font-size:11px;font-family:'DM Mono',monospace;flex-shrink:0; }
+  .modal-bar-val { width:160px;text-align:right;font-size:11px;font-family:'DM Mono',monospace;flex-shrink:0;white-space:nowrap; }
   .modal-ms-row { display:flex;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border); }
   .modal-ms-card { flex:1;background:var(--surface2);border-radius:8px;padding:10px;text-align:center; }
   .modal-ms-card .ms-lbl { font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px; }
@@ -679,7 +679,7 @@ function openModal(lotto, statiMetri, totale) {
     const pct = totale > 0 ? m/totale*100 : 0;
     const nPratG = new Set(allPrats.filter(p => g.stati.includes(p.stato)).map(p => p.codice)).size;
     const nLabel = nPratG > 0
-      ? `<span style="font-size:9px;color:var(--muted);margin-left:6px">· ${nPratG} prat.</span>`
+      ? `<span style="font-size:10px;color:var(--muted);margin-left:8px;font-family:'DM Mono',monospace">· ${nPratG} prat.</span>`
       : '';
 
     let deltaHtml = '';
@@ -1260,7 +1260,7 @@ function renderDashboard(data, prevSnapshot=null) {
       const baseText = kpiLabel.getAttribute('data-base') || kpiLabel.textContent.replace(/\s*·.*$/, '').trim();
       kpiLabel.setAttribute('data-base', baseText);
       kpiLabel.innerHTML = baseText + (nPrat > 0
-        ? ` <span style="color:var(--text);font-weight:600;font-size:10px"> · N° Pratiche: ${nPrat}</span>`
+        ? `<br><span style="color:var(--text);font-weight:600;font-size:10px;letter-spacing:0.05em">N° Pratiche: ${nPrat}</span>`
         : '');
     }
 
