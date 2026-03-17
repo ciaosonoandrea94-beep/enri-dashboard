@@ -312,10 +312,12 @@
         <div class="legend-item"><div class="legend-dot" style="background:#4a4f6a"></div>In Attesa / Redazione</div>
       </div>
       <div id="msLegendBar" style="display:flex;flex-wrap:wrap;gap:10px;padding:10px 18px;border-top:1px solid var(--border)">
-        <span style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);align-self:center;margin-right:4px">⏱ Milestone:</span>
-        <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted)"><div style="width:10px;height:10px;border-radius:2px;background:#3a7a4a"></div>Invio Permessi</div>
-        <div style="display:flex;align-items:center;gap:14px;margin-left:10px;font-size:10px;color:var(--muted)">
-          <span>🔵 &gt;6 mesi</span><span>🟡 3-6 mesi</span><span>🔴 &lt;3 mesi</span><span>✓ completata</span>
+        <span style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);align-self:center;margin-right:4px">⏱ Invio Permessi:</span>
+        <div style="display:flex;align-items:center;gap:12px;font-size:10px;color:var(--muted)">
+          <span style="display:flex;align-items:center;gap:4px"><span style="color:#4f8ef7;font-size:11px">●</span> &gt;6 mesi</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="color:#c9a227;font-size:11px">●</span> 3–6 mesi</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="color:#cc3333;font-size:11px">●</span> &lt;3 mesi</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="color:#3a8c5c;font-size:12px">✓</span> completata</span>
         </div>
       </div>
     </div>
@@ -366,37 +368,25 @@ function buildGruppiMap(statiMap) {
 }
 
 function renderBarre(gruppiMap, totale, tooltip, onHover) {
-  // Ordine di avanzamento: dal più avanzato a sinistra, grigio (In Attesa/Redazione) sempre a destra
-  const ORDINE_AVANZAMENTO = [
-    'Ottenuto',
-    'Protocollato Integrazione',
-    'Necessaria Integrazione',
+  // Ordine workflow sinistra→destra, grigio (In Attesa) sempre a destra
+  const ORDINE_WORKFLOW = [
     'In Verifica / In Firma',
     'Inviato / Protocollato',
+    'Necessaria Integrazione',
+    'Protocollato Integrazione',
+    'Ottenuto',
+    'In Attesa / Redazione',
   ];
-  const GRIGIO_LABEL = 'In Attesa / Redazione';
-
   let html = '';
-  // Prima i segmenti colorati in ordine di avanzamento
-  ORDINE_AVANZAMENTO.forEach(label => {
+  ORDINE_WORKFLOW.forEach(label => {
     const g = STATI_GRUPPI.find(x => x.label === label);
     if (!g) return;
     const m = gruppiMap[g.label] || 0;
     if (m <= 0) return;
     const pct = totale > 0 ? m / totale * 100 : 0;
-    const labelHtml = pct >= 5 ? `<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;text-shadow:0 0 6px rgba(0,0,0,1),0 1px 4px rgba(0,0,0,0.9);pointer-events:none;font-family:'DM Mono',monospace;letter-spacing:-0.01em">${pct.toFixed(0)}%</span>` : '';
+    const labelHtml = pct >= 5 ? `<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;text-shadow:0 0 6px rgba(0,0,0,1),0 1px 4px rgba(0,0,0,0.9);pointer-events:none;font-family:'DM Mono',monospace;letter-spacing:-0.01em">${pct.toFixed(1)}%</span>` : '';
     html += `<div class="bar-seg" style="width:${pct}%;background:${g.color};position:relative" data-tip="${g.label}: ${pct.toFixed(1)}% (${fmt(m)} m)">${labelHtml}</div>`;
   });
-  // Poi il grigio a destra
-  const gGrigio = STATI_GRUPPI.find(x => x.label === GRIGIO_LABEL);
-  if (gGrigio) {
-    const m = gruppiMap[GRIGIO_LABEL] || 0;
-    if (m > 0) {
-      const pct = totale > 0 ? m / totale * 100 : 0;
-      const labelHtml = pct >= 5 ? `<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;text-shadow:0 0 6px rgba(0,0,0,1),0 1px 4px rgba(0,0,0,0.9);pointer-events:none;font-family:'DM Mono',monospace;letter-spacing:-0.01em">${pct.toFixed(0)}%</span>` : '';
-      html += `<div class="bar-seg" style="width:${pct}%;background:${gGrigio.color};position:relative" data-tip="${GRIGIO_LABEL}: ${pct.toFixed(1)}% (${fmt(m)} m)">${labelHtml}</div>`;
-    }
-  }
   return html;
 }
 // dati.csv non più necessario — loadData legge da Riepilogo_progettazione.csv
@@ -813,7 +803,7 @@ function openModal(lotto, statiMetri, totale) {
           <div class="modal-bar-fill" style="width:${pct}%;background:${g.color}"></div>
           <span class="modal-bar-pct">${(() => {
             const nPG = new Set(allPrats.filter(p => g.stati.includes(p.stato)).map(p => p.codice)).size;
-            const pctStr = pct >= 5 ? pct.toFixed(0)+'%' : '';
+            const pctStr = pct >= 5 ? pct.toFixed(1)+'%' : '';
             const nStr = nPG > 0 ? '('+nPG+')' : '';
             return [pctStr, nStr].filter(Boolean).join(' ');
           })()}</span>
@@ -923,7 +913,7 @@ function openModalCluster(cl, statiMap, totale) {
     if (!m) return;
     const pct = totale > 0 ? m/totale*100 : 0;
     const nPG = clPrats.filter(p => g.stati.includes(p.stato)).length;
-    const inside = [pct>=5?pct.toFixed(0)+'%':'', nPG>0?'('+nPG+')':''].filter(Boolean).join(' ');
+    const inside = [pct>=5?pct.toFixed(1)+'%':'', nPG>0?'('+nPG+')':''].filter(Boolean).join(' ');
     barreHtml += `<div class="modal-bar-row">
       <span class="modal-bar-label">${g.label}</span>
       <div class="modal-bar-track">
@@ -1481,7 +1471,7 @@ function renderDashboard(data) {
   Object.entries(kpiMap).forEach(([key,stati])=>{
     const metri=stati.reduce((s,st)=>s+(globalStati[st]||0),0);
     const pct=grandTotal>0?metri/grandTotal*100:0;
-    document.getElementById('kpi-'+key).textContent=pct.toFixed(0)+'%';
+    document.getElementById('kpi-'+key).textContent=pct.toFixed(1)+'%';
 
     // N° Pratiche nel label
     const nPrat = countPrat(stati);
@@ -1533,9 +1523,9 @@ function renderDashboard(data) {
       lottiAttivi.forEach(l => Object.entries(lottiMap[l]).forEach(([s,m]) => { gruppiAttivi[s] = (gruppiAttivi[s]||0)+m; }));
       const segsAttiviHtml = renderBarre(buildGruppiMap(gruppiAttivi), totAttivi, tooltip);
       totAttiviRow.innerHTML = `
-        <div style="width:90px;flex-shrink:0;font-size:8px;color:var(--muted);text-align:right;padding-right:8px;font-style:italic">Totale attivi ↗</div>
+        <div style="width:90px;flex-shrink:0;font-size:8px;color:var(--muted);text-align:right;padding-right:8px;font-style:italic" style="color:var(--text);font-weight:700;font-size:10px">Totale attivi ↗</div>
         <div class="bar-track" style="height:8px;flex:1">${segsAttiviHtml}</div>
-        <span style="min-width:62px;text-align:right;font-size:9px;color:var(--muted);font-family:'DM Mono',monospace;flex-shrink:0;font-weight:600">${fmt(totAttivi)} m</span>`;
+        <span style="min-width:62px;text-align:right;font-size:10px;color:var(--text);font-family:'DM Mono',monospace;flex-shrink:0;font-weight:700">${fmt(totAttivi)} m</span>`;
       totAttiviRow.addEventListener('click', () => openModalGruppo('⚡ Riepilogo Lotti Attivi', lottiAttivi, lottiMap, lottiTotale));
       wrap.appendChild(totAttiviRow);
 
@@ -1594,9 +1584,9 @@ function renderDashboard(data) {
     lottiFuturi.forEach(l => Object.entries(lottiMap[l]).forEach(([s,m]) => { gruppiFuturi[s] = (gruppiFuturi[s]||0)+m; }));
     const segsFuturiHtml = renderBarre(buildGruppiMap(gruppiFuturi), totFuturi, tooltip);
     totFuturiRow.innerHTML = `
-      <div style="width:90px;flex-shrink:0;font-size:8px;color:var(--muted);text-align:right;padding-right:8px;font-style:italic">Totale avvio ↗</div>
+      <div style="width:90px;flex-shrink:0;font-size:8px;color:var(--muted);text-align:right;padding-right:8px;font-style:italic" style="color:var(--text);font-weight:700;font-size:10px">Totale avvio ↗</div>
       <div class="bar-track" style="height:8px;flex:1">${segsFuturiHtml}</div>
-      <span style="min-width:62px;text-align:right;font-size:9px;color:var(--muted);font-family:'DM Mono',monospace;flex-shrink:0;font-weight:600">${fmt(totFuturi)} m</span>`;
+      <span style="min-width:62px;text-align:right;font-size:10px;color:var(--text);font-family:'DM Mono',monospace;flex-shrink:0;font-weight:700">${fmt(totFuturi)} m</span>`;
     totFuturiRow.addEventListener('click', () => openModalGruppo('🔜 Riepilogo Lotti in Avvio', lottiFuturi, lottiMap, lottiTotale));
     wrap.appendChild(totFuturiRow);
   }
