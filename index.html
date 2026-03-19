@@ -8,6 +8,7 @@
 <title>ENRI — Dashboard Avanzamento</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root {
     --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a; --border: #2e3347;
@@ -208,6 +209,7 @@
     <button class="btn" style="background:#2f5496" onclick="stampaLotti()">⬇ PDF Lotti</button>
     <button class="btn" style="background:#1a5c3a" onclick="stampaCluster()">⬇ PDF Cluster</button>
     <button class="btn" style="background:#5a3a8c" onclick="apriStorico()">📈 Storico</button>
+    <button class="btn" style="background:#1d5c3a;border:1px solid #3a8c5c55" onclick="exportTuttiXlsx()" title="Esporta tutte le pratiche con tutti i dati">📊 Excel Pratiche</button>
   </div>
 </div>
 
@@ -341,6 +343,69 @@
   </div>
 </div>
 <script>
+// ── EXPORT EXCEL ──────────────────────────────────────────────────────────────
+function exportXlsx(pratiche, filename) {
+  if (!pratiche || !pratiche.length) { alert('Nessuna pratica da esportare.'); return; }
+
+  const header = ['Codice', 'Tipo', 'Lotto', 'Stato', 'Ente', 'Data Invio', 'Data Agg./Prot./Ott.', 'Metri (m)'];
+  const rows = pratiche.map(p => {
+    const dateParts = buildDateParts(p);
+    const invio = dateParts.find(d => d.startsWith('Invio:'))?.replace('Invio: ','') || '';
+    const agg   = dateParts.find(d => !d.startsWith('Invio:'))?.replace(/^[^:]+:\s*/,'') || '';
+    const tipo  = p.codice.startsWith('AUT/') ? 'AUTORIZZAZIONE'
+                : p.codice.startsWith('NO/')  ? 'NULLA OSTA'
+                : p.codice.startsWith('ORD/') ? 'ORDINANZA'
+                : p.tipo || '';
+    return [p.codice, tipo, p.lotto || '', p.stato, p.ente || '', invio, agg, p.metri || 0];
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+
+  // Larghezze colonne
+  ws['!cols'] = [
+    {wch:20},{wch:18},{wch:8},{wch:30},{wch:30},{wch:14},{wch:14},{wch:12}
+  ];
+
+  // Stile intestazioni (sfondo blu scuro, testo bianco) — xlsx-full supporta minimal style
+  const headerRange = XLSX.utils.decode_range(ws['!ref']);
+  for (let c = headerRange.s.c; c <= headerRange.e.c; c++) {
+    const cell = ws[XLSX.utils.encode_cell({r:0, c})];
+    if (cell) {
+      cell.s = {
+        font:    { bold: true, color: { rgb: 'FFFFFF' } },
+        fill:    { fgColor: { rgb: '2F5496' } },
+        alignment: { horizontal: 'center' }
+      };
+    }
+  }
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Pratiche');
+  XLSX.writeFile(wb, filename + '.xlsx');
+}
+
+function exportTuttiXlsx() {
+  if (!window._praticheDetailPerLotto) { alert('Nessun dato pratiche disponibile. Carica il Master.csv.'); return; }
+
+  const tutte = [];
+  const LOTTO_ORDER = ['1A','1B','2A','2B','1','2','3','4','5','6','7','8'];
+  LOTTO_ORDER.forEach(lotto => {
+    (window._praticheDetailPerLotto[lotto] || []).forEach(p => tutte.push({...p, lotto}));
+  });
+  // Aggiungi eventuali lotti non in ordine fisso
+  Object.keys(window._praticheDetailPerLotto).forEach(lotto => {
+    if (!LOTTO_ORDER.includes(lotto)) {
+      (window._praticheDetailPerLotto[lotto] || []).forEach(p => tutte.push({...p, lotto}));
+    }
+  });
+
+  if (!tutte.length) { alert('Nessuna pratica disponibile.'); return; }
+
+  const today = new Date().toISOString().split('T')[0];
+  exportXlsx(tutte, 'ENRI_Tutte_Pratiche_' + today);
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 const STATI = ['IN ATTESA','IN REDAZIONE','IN FIRMA RDS','INVIATO','PROTOCOLLATO','NECESSARIA INTEGRAZIONE','IN REDAZIONE INTEGRAZIONE','PROTOCOLLATO INTEGRAZIONE','OTTENUTO'];
 const COLORS = {
   'IN ATTESA':                  '#4a4f6a',
@@ -712,7 +777,7 @@ function openModal(lotto, statiMetri, totale) {
 
   // Header: Totale + Autorizzati + Impresa
   body.innerHTML = `
-    <div style="display:flex;gap:24px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border);flex-wrap:wrap">
+    <div style="display:flex;gap:24px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:flex-end">
       <div>
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted)">Totale</div>
         <div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace">${fmt(totale)} m</div>
@@ -721,10 +786,13 @@ function openModal(lotto, statiMetri, totale) {
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted)">🏆 Autorizzati</div>
         <div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:#3a8c5c">${fmt(metriOttenuto)} m <span style="font-size:14px">${pctOttenuto}%</span></div>
       </div>
-      ${impresa ? `<div style="margin-left:auto;text-align:right">
+      ${impresa ? `<div>
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted)">Impresa</div>
         <div style="font-size:15px;font-weight:600;color:var(--accent)">${impresa}</div>
       </div>` : ''}
+      <div style="margin-left:auto;display:flex;align-items:flex-end">
+        <button id="btnDlLotto" style="font-size:11px;padding:6px 14px;border-radius:6px;background:#1d5c3a;color:white;border:1px solid #3a8c5c55;cursor:pointer;font-weight:500">📥 Scarica Excel</button>
+      </div>
     </div>
     ${comuni.length ? `
     <div style="margin-bottom:16px;padding:12px 14px;background:var(--surface2);border-radius:8px;border-left:3px solid var(--accent)">
@@ -856,9 +924,14 @@ function openModal(lotto, statiMetri, totale) {
   }
 
   document.getElementById('modalOverlay').classList.add('open');
-}
 
-function closeModal(e) {
+  // Collega bottone scarica Excel
+  const btnDl = document.getElementById('btnDlLotto');
+  if (btnDl) {
+    const _prats = allPrats.map(p => ({...p, lotto}));
+    btnDl.onclick = () => exportXlsx(_prats, 'ENRI_Lotto' + lotto + '_pratiche');
+  }
+}
   if (e && e.target !== document.getElementById('modalOverlay')) return;
   document.getElementById('modalOverlay').classList.remove('open');
 }
@@ -951,7 +1024,7 @@ function openModalCluster(cl, statiMap, totale) {
   });
 
   body.innerHTML = `
-    <div style="display:flex;gap:24px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border)">
+    <div style="display:flex;gap:24px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border);align-items:flex-end;flex-wrap:wrap">
       <div>
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted)">Totale Cluster ${cl}</div>
         <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace">${fmt(totale)} m</div>
@@ -960,11 +1033,20 @@ function openModalCluster(cl, statiMap, totale) {
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted)">🏆 Autorizzati</div>
         <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:#3a8c5c">${fmt(ottenuto)} m <span style="font-size:15px">${pctOtt}%</span></div>
       </div>
+      ${clPrats.length > 0 ? `<div style="margin-left:auto">
+        <button id="btnDlCluster" style="font-size:11px;padding:6px 14px;border-radius:6px;background:#1d5c3a;color:white;border:1px solid #3a8c5c55;cursor:pointer;font-weight:500">📥 Scarica Excel</button>
+      </div>` : ''}
     </div>
     ${barreHtml}
     ${pratHtml}`;
 
   document.getElementById('modalClusterOverlay').classList.add('open');
+
+  // Collega bottone scarica Excel cluster
+  const btnDlCl = document.getElementById('btnDlCluster');
+  if (btnDlCl) {
+    btnDlCl.onclick = () => exportXlsx(clPrats, 'ENRI_Cluster' + cl + '_pratiche');
+  }
 }
 
 function closeModalGruppo(e) {
@@ -2785,6 +2867,9 @@ function openModalKpi(key) {
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted)">Metri coinvolti</div>
         <div style="font-size:24px;font-weight:700;font-family:'DM Mono',monospace">${fmt(totMetri)} m</div>
       </div>
+      <div style="margin-left:auto">
+        <button onclick="exportXlsx(window._kpiModalPratiche,'ENRI_${key}_pratiche')" style="font-size:11px;padding:6px 14px;border-radius:6px;background:#1d5c3a;color:white;border:1px solid #3a8c5c55;cursor:pointer;font-weight:500">📥 Scarica Excel</button>
+      </div>
     </div>`;
 
   // Per ogni lotto: header + tabella pratiche
@@ -2841,7 +2926,7 @@ function openModalKpi(key) {
 
   document.getElementById('modalKpiBody').innerHTML = html;
   document.getElementById('modalKpiOverlay').classList.add('open');
-}
+  window._kpiModalPratiche = allPrats; // per il bottone Scarica Excel
 
 function closeModalKpi(e) {
   if (e && e.target !== document.getElementById('modalKpiOverlay')) return;
