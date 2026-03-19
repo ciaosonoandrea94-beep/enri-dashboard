@@ -1346,9 +1346,14 @@ async function loadData(saveSnapshot = false) {
     document.getElementById('statusBadge').className = 'badge ok';
     const luEl = document.getElementById('lastUpdate');
     if (luEl) {
-      const now = new Date();
-      luEl.textContent = now.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'}) + ' ' + now.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
-      luEl.style.display = 'inline';
+      const storico = storageRecord.storico || [];
+      const lastTs = storico.length > 0 ? storico[storico.length - 1].ts : null;
+      if (lastTs) {
+        const d = new Date(lastTs);
+        luEl.textContent = '📅 ' + d.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'}) + ' ' + d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+        luEl.title = 'Data ultimo snapshot salvato in JSONBin';
+        luEl.style.display = 'inline';
+      }
     }
     document.getElementById('loadingScreen').style.display = 'none';
     setTimeout(()=>setLoading(0),600);
