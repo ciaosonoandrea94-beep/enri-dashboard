@@ -1341,18 +1341,13 @@ async function loadData(saveSnapshot = false) {
     setLoading(100);
     renderDashboard(data);
 
-    document.getElementById('statusBadge').textContent = '● Aggiornato';
+    const _storico = storageRecord.storico || [];
+    const _lastTs = _storico.length > 0 ? _storico[_storico.length - 1].ts : null;
+    const _dataFmt = _lastTs
+      ? new Date(_lastTs).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'})
+      : null;
+    document.getElementById('statusBadge').textContent = _dataFmt ? '● Aggiornato al ' + _dataFmt : '● Aggiornato';
     document.getElementById('statusBadge').className = 'badge ok';
-    const luEl = document.getElementById('lastUpdate');
-    if (luEl) {
-      const storico = storageRecord.storico || [];
-      const lastTs = storico.length > 0 ? storico[storico.length - 1].ts : null;
-      if (lastTs) {
-        const d = new Date(lastTs);
-        const dataFmt = d.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
-        document.getElementById('statusBadge').textContent = '● Aggiornato al ' + dataFmt;
-      }
-    }
     document.getElementById('loadingScreen').style.display = 'none';
     setTimeout(()=>setLoading(0),600);
   } catch(e) {
