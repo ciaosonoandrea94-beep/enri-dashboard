@@ -932,6 +932,8 @@ function openModal(lotto, statiMetri, totale) {
     btnDl.onclick = () => exportXlsx(_prats, 'ENRI_Lotto' + lotto + '_pratiche');
   }
 }
+
+function closeModal(e) {
   if (e && e.target !== document.getElementById('modalOverlay')) return;
   document.getElementById('modalOverlay').classList.remove('open');
 }
@@ -2927,6 +2929,7 @@ function openModalKpi(key) {
   document.getElementById('modalKpiBody').innerHTML = html;
   document.getElementById('modalKpiOverlay').classList.add('open');
   window._kpiModalPratiche = allPrats; // per il bottone Scarica Excel
+}
 
 function closeModalKpi(e) {
   if (e && e.target !== document.getElementById('modalKpiOverlay')) return;
