@@ -45,6 +45,12 @@
   .modal-kpi-overlay.open { opacity:1;pointer-events:all; }
   .modal-kpi { background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;width:900px;max-width:96vw;max-height:85vh;overflow-y:auto;transform:translateY(20px);transition:transform 0.2s; }
   .modal-kpi-overlay.open .modal-kpi { transform:translateY(0); }
+  /* Tabella pratiche */
+  .prat-table { width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif }
+  .prat-table tbody tr { transition: background 0.1s; }
+  .prat-table tbody tr:hover td { background: #ffffff08; }
+  .prat-table tbody tr:nth-child(even) td { background: #ffffff03; }
+  .prat-table tbody tr:nth-child(even):hover td { background: #ffffff0b; }
   .kpi::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
   .kpi.attesa::before { background: var(--attesa); }
   .kpi.redazione::before { background: var(--redazione); }
@@ -759,29 +765,41 @@ function openModal(lotto, statiMetri, totale) {
     </div>`;
   };
 
-  // Pannello pratiche — due colonne AUT | NO+ORD
+  // Pannello pratiche — tabella unica
   let pratHtml = '';
   if (allPrats.length > 0) {
-    const autPrats = allPrats.filter(p => p.codice.startsWith('AUT/'));
-    const noPrats  = allPrats.filter(p => !p.codice.startsWith('AUT/'));
-    const colTitle = (label, n) =>
-      `<div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border)">${label} (${n})</div>`;
-    const colCards = (arr) => arr.map(pratCard).join('<div style="height:5px"></div>');
+    const righe = allPrats.map(p => {
+      const col = STATI_COLORI_MAP[p.stato] || '#6b7080';
+      const dateParts = buildDateParts(p);
+      const invio = dateParts.find(d => d.startsWith('Invio:'))?.replace('Invio: ','') || '';
+      const agg   = dateParts.find(d => !d.startsWith('Invio:'))?.replace(/^[^:]+:\s*/,'') || '';
+      return `<tr style="border-bottom:1px solid #2e334722" onmouseover="this.style.background='#ffffff06'" onmouseout="this.style.background=''">
+        <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:10px;font-weight:600;white-space:nowrap;color:var(--text);border-left:3px solid ${col}">${p.codice}</td>
+        <td style="padding:6px 10px;font-size:9px;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.ente || '—'}</td>
+        <td style="padding:6px 10px;font-size:9px;font-weight:700;color:${col};white-space:nowrap">${p.stato}</td>
+        <td style="padding:6px 10px;font-size:9px;font-family:'DM Mono',monospace;color:var(--muted);white-space:nowrap;text-align:center">${invio}</td>
+        <td style="padding:6px 10px;font-size:9px;font-family:'DM Mono',monospace;color:var(--muted);white-space:nowrap;text-align:center">${agg}</td>
+        <td style="padding:6px 10px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text);text-align:right;white-space:nowrap;font-weight:600">${fmt(p.metri)} m</td>
+      </tr>`;
+    }).join('');
 
-    pratHtml = `<div style="padding-left:20px;border-left:1px solid var(--border);display:flex;flex-direction:column;gap:0;min-width:0;flex:1">
+    pratHtml = `<div style="padding-left:20px;border-left:1px solid var(--border);min-width:0;flex:1;overflow-x:auto">
       <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);font-weight:600">
         Dettaglio pratiche (${allPrats.length})
       </div>
-      <div style="display:grid;grid-template-columns:${noPrats.length>0?'1fr 1fr':'1fr'};gap:12px;align-items:start">
-        <div>
-          ${autPrats.length ? colTitle('Autorizzazioni',autPrats.length) : ''}
-          ${colCards(autPrats)}
-        </div>
-        ${noPrats.length ? `<div>
-          ${colTitle('Nulla Osta / Ordinanze',noPrats.length)}
-          ${colCards(noPrats)}
-        </div>` : ''}
-      </div>
+      <table class="prat-table">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border)">
+            <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:left;font-weight:600;background:var(--surface2)">Codice</th>
+            <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:left;font-weight:600;background:var(--surface2)">Ente</th>
+            <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:left;font-weight:600;background:var(--surface2)">Stato</th>
+            <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:center;font-weight:600;background:var(--surface2)">Invio</th>
+            <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:center;font-weight:600;background:var(--surface2)">Agg./Prot./Ott.</th>
+            <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:right;font-weight:600;background:var(--surface2)">Metri</th>
+          </tr>
+        </thead>
+        <tbody>${righe}</tbody>
+      </table>
     </div>`;
   }
 
@@ -873,36 +891,43 @@ function openModalCluster(cl, statiMap, totale) {
     clPrats.sort((a,b) => { const da=parseDateIT(a.dum),db=parseDateIT(b.dum); if(da&&db) return db-da; return da?-1:db?1:a.codice.localeCompare(b.codice); });
   }
 
-  const pratCard = (p) => {
-    const col = STATI_COLORI_MAP[p.stato] || '#6b7080';
-    const dateStr = buildDateParts(p).join(' · ');
-    return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:5px">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
-        <span style="font-family:'DM Mono',monospace;font-size:10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 7px;flex-shrink:0">${p.codice}</span>
-        <span style="font-size:9px;font-weight:700;color:${col};flex-shrink:0">${p.stato}</span>
-        <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text);margin-left:auto;flex-shrink:0">${fmt(p.metri)} m</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;gap:6px">
-        <span style="font-size:9px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.ente||''}</span>
-        ${dateStr?`<span style="font-size:9px;color:var(--muted);white-space:nowrap;flex-shrink:0">${dateStr}</span>`:''}
-      </div>
-    </div>`;
-  };
-
-  // Pannello pratiche a due colonne
+  // Pannello pratiche — tabella
   let pratHtml = '';
   if (clPrats.length > 0) {
-    const autP = clPrats.filter(p => p.codice.startsWith('AUT/'));
-    const noP  = clPrats.filter(p => !p.codice.startsWith('AUT/'));
-    const colT = (lbl,n) => `<div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border)">${lbl} (${n})</div>`;
+    const righeCluster = clPrats.map(p => {
+      const col = STATI_COLORI_MAP[p.stato] || '#6b7080';
+      const dateParts = buildDateParts(p);
+      const invio = dateParts.find(d => d.startsWith('Invio:'))?.replace('Invio: ','') || '';
+      const agg   = dateParts.find(d => !d.startsWith('Invio:'))?.replace(/^[^:]+:\s*/,'') || '';
+      return `<tr style="border-bottom:1px solid #2e334722" onmouseover="this.style.background='#ffffff06'" onmouseout="this.style.background=''">
+        <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:10px;font-weight:600;white-space:nowrap;color:var(--text);border-left:3px solid ${col}">${p.codice}</td>
+        <td style="padding:6px 10px;font-size:9px;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.ente || '—'}</td>
+        <td style="padding:6px 10px;font-size:9px;font-weight:700;color:${col};white-space:nowrap">${p.stato}</td>
+        <td style="padding:6px 10px;font-size:9px;font-family:'DM Mono',monospace;color:var(--muted);white-space:nowrap;text-align:center">${invio}</td>
+        <td style="padding:6px 10px;font-size:9px;font-family:'DM Mono',monospace;color:var(--muted);white-space:nowrap;text-align:center">${agg}</td>
+        <td style="padding:6px 10px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text);text-align:right;white-space:nowrap;font-weight:600">${fmt(p.metri)} m</td>
+      </tr>`;
+    }).join('');
+
     pratHtml = `
       <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
-        <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);font-weight:600;margin-bottom:12px">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);font-weight:600;margin-bottom:10px">
           Dettaglio pratiche (${clPrats.length})
         </div>
-        <div style="display:grid;grid-template-columns:${noP.length?'1fr 1fr':'1fr'};gap:14px;align-items:start">
-          <div>${autP.length?colT('Autorizzazioni',autP.length):''}${autP.map(pratCard).join('')}</div>
-          ${noP.length?`<div>${colT('Nulla Osta / Ordinanze',noP.length)}${noP.map(pratCard).join('')}</div>`:''}
+        <div style="overflow-x:auto">
+          <table class="prat-table">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border)">
+                <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:left;font-weight:600;background:var(--surface2)">Codice</th>
+                <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:left;font-weight:600;background:var(--surface2)">Ente</th>
+                <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:left;font-weight:600;background:var(--surface2)">Stato</th>
+                <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:center;font-weight:600;background:var(--surface2)">Invio</th>
+                <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:center;font-weight:600;background:var(--surface2)">Agg./Prot./Ott.</th>
+                <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:right;font-weight:600;background:var(--surface2)">Metri</th>
+              </tr>
+            </thead>
+            <tbody>${righeCluster}</tbody>
+          </table>
         </div>
       </div>`;
   }
@@ -2762,36 +2787,54 @@ function openModalKpi(key) {
       </div>
     </div>`;
 
-  // Per ogni lotto: header + griglia pratiche
+  // Per ogni lotto: header + tabella pratiche
   sortedLotti.forEach(lotto => {
     const prats = byLotto[lotto];
     const totL = prats.reduce((s, p) => s + (p.metri || 0), 0);
     const impresa = IMPRESE[lotto] || '';
 
+    const righe = prats.map(p => {
+      const col = STATI_COLORI_MAP[p.stato] || '#6b7080';
+      const dateParts = buildDateParts(p);
+      const invio = dateParts.find(d => d.startsWith('Invio:'))?.replace('Invio: ','') || '';
+      const agg   = dateParts.find(d => !d.startsWith('Invio:'))?.replace(/^[^:]+:\s*/,'') || '';
+      return `<tr style="border-bottom:1px solid #2e334722">
+        <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:10px;font-weight:600;white-space:nowrap;color:var(--text);border-left:3px solid ${col}">${p.codice}</td>
+        <td style="padding:6px 10px;font-size:9px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.ente || '—'}</td>
+        <td style="padding:6px 10px;font-size:9px;font-weight:700;color:${col};white-space:nowrap">${p.stato}</td>
+        <td style="padding:6px 10px;font-size:9px;font-family:'DM Mono',monospace;color:var(--muted);white-space:nowrap;text-align:center">${invio}</td>
+        <td style="padding:6px 10px;font-size:9px;font-family:'DM Mono',monospace;color:var(--muted);white-space:nowrap;text-align:center">${agg}</td>
+        <td style="padding:6px 10px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text);text-align:right;white-space:nowrap;font-weight:600">${fmt(p.metri)} m</td>
+      </tr>`;
+    }).join('');
+
     html += `
-      <div style="margin-bottom:20px">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)">
+      <div style="margin-bottom:22px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border)">
           <span style="font-size:13px;font-weight:700;color:var(--accent);font-family:'DM Mono',monospace">Lotto ${lotto}</span>
           ${impresa ? `<span style="font-size:10px;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 8px">${impresa}</span>` : ''}
           <span style="font-size:10px;color:var(--muted);margin-left:auto;font-family:'DM Mono',monospace">${prats.length} pratiche · ${fmt(totL)} m</span>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px">
-          ${prats.map(p => {
-            const col = STATI_COLORI_MAP[p.stato] || '#6b7080';
-            const dateParts = buildDateParts(p);
-            const dateStr = dateParts.join(' · ');
-            return `<div style="background:var(--surface2);border:1px solid var(--border);border-left:3px solid ${col};border-radius:6px;padding:9px 11px">
-              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-                <span style="font-family:'DM Mono',monospace;font-size:10px;font-weight:700;color:var(--text)">${p.codice}</span>
-                <span style="font-size:9px;color:${col};font-weight:600;margin-left:auto;white-space:nowrap">${p.stato}</span>
-              </div>
-              <div style="display:flex;justify-content:space-between;align-items:center;gap:6px">
-                <span style="font-size:9px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.ente || '—'}</span>
-                <span style="font-size:9px;font-family:'DM Mono',monospace;color:var(--text);flex-shrink:0">${fmt(p.metri)} m</span>
-              </div>
-              ${dateStr ? `<div style="font-size:8px;color:var(--muted);margin-top:3px">${dateStr}</div>` : ''}
-            </div>`;
-          }).join('')}
+        <div style="overflow-x:auto">
+          <table class="prat-table">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border)">
+                <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:left;font-weight:600;background:var(--surface2)">Codice</th>
+                <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:left;font-weight:600;background:var(--surface2)">Ente</th>
+                <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:left;font-weight:600;background:var(--surface2)">Stato</th>
+                <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:center;font-weight:600;background:var(--surface2)">Invio</th>
+                <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:center;font-weight:600;background:var(--surface2)">Agg./Prot./Ott.</th>
+                <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:right;font-weight:600;background:var(--surface2)">Metri</th>
+              </tr>
+            </thead>
+            <tbody>${righe}</tbody>
+            <tfoot>
+              <tr style="border-top:2px solid var(--border)">
+                <td colspan="5" style="padding:6px 10px;font-size:10px;font-weight:700;color:var(--text)">Totale lotto ${lotto}</td>
+                <td style="padding:6px 10px;font-size:10px;font-family:'DM Mono',monospace;font-weight:700;color:var(--text);text-align:right">${fmt(totL)} m</td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
       </div>`;
   });
