@@ -499,7 +499,7 @@ function render(){
     h+=`<tr id="km_${i}">
       <td contenteditable="false">${m.d}</td>
       <td class="cd" style="color:${col}" contenteditable="false">${m.b}</td>
-      <td class="cf" style="color:${m.b!==m.f?'var(--yellow)':col}" contenteditable="false">${m.f}</td>
+      <td class="cf" style="color:${col}" contenteditable="false">${m.f}</td>
       <td style="white-space:nowrap">${ragSel(m.r,'km'+i)} <button class="del-btn" onclick="delRow('km_${i}')">×</button></td>
     </tr>`;
   });
@@ -563,7 +563,7 @@ function mmCard(m,i){
     </div>
     <div class="mc-meta">
       <span>📅 Baseline: <strong style="color:${pcol}" contenteditable="false">${m.b}</strong></span>
-      <span>📌 Forecast: <strong style="color:${m.b!==m.f?'var(--yellow)':pcol}" contenteditable="false">${m.f}</strong></span>
+      <span>📌 Forecast: <strong style="color:${pcol}" contenteditable="false">${m.f}</strong></span>
       <span style="display:flex;align-items:center;gap:6px;margin-left:auto">
         <span style="font-size:10px;color:var(--muted)">% complete:</span>
         ${pbHtml(m.pct, pcol, 'pct_'+i)}
@@ -759,11 +759,79 @@ function addNote(){
 async function init(){
   const pd=document.getElementById('printDate');
   if(pd) pd.textContent=document.getElementById('repDate')?.textContent||'';
+  // Carica sempre i dati freschi dal CSV
   await loadCSVData();
+  // Poi prova a caricare il layout salvato (testi/RAG/milestone modificati)
   const restored = await loadFromStorage();
-  if(!restored){ render(); }
-  else { updateLiveData(); }
+  if(!restored){
+    render();
+  } else {
+    // Layout ripristinato da JSONBin: aggiorna solo la sezione dati live (Permit Progress)
+    updateLiveData();
+  }
   document.querySelectorAll('[contenteditable]').forEach(el=>el.contentEditable='false');
+}
+
+// Rigenera solo il blocco Permit Submission Progress con i dati freschi del CSV,
+// lasciando intatte tutte le altre sezioni editate (milestone, note, RAG, ecc.)
+function updateLiveData(){
+  const permitCard = document.getElementById('permitCard');
+  if(!permitCard) { render(); return; }
+
+  const clusters = [
+    {id:'1', name:'Cluster 1', lotti:['1A','1B']},
+    {id:'2', name:'Cluster 2', lotti:['2A','2B']},
+  ];
+
+  let h = `<div class="ch"><span class="ct">Permit Submission Progress</span></div><div class="cb">`;
+
+  clusters.forEach(cl => {
+    const cp = CLUSTER_PROGRESS[cl.id];
+    const clPct   = cp ? (cp.avanz/cp.tot*100) : 0;
+    const clTot   = cp ? cp.tot : 0;
+    const clAvanz = cp ? cp.avanz : 0;
+
+    h+=`<div style="margin-bottom:${cl.id==='1'?'22px':'0'}">
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+        <div style="font-size:15px;font-weight:700;color:var(--accent)">${cl.name}</div>
+        <div style="flex:1;height:10px;background:var(--surface2);border-radius:5px;overflow:hidden">
+          <div style="height:100%;border-radius:5px;background:linear-gradient(90deg,#3a8c5c,#4f8ef7);width:${clPct.toFixed(1)}%"></div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:20px;font-weight:800;font-family:'DM Mono',monospace;color:var(--accent)">${clPct.toFixed(1)}%</div>
+          <div style="font-size:9px;color:var(--muted);font-family:'DM Mono',monospace">${fmt(clAvanz)} / ${fmt(clTot)} m submitted+</div>
+        </div>
+      </div>
+      <div class="two-col">`;
+
+    cl.lotti.forEach(lot => {
+      const d = CSV_DATA[lot];
+      if(!d) return;
+      h+=`<div class="sc">
+        <div class="sc-h">
+          <div>
+            <div class="sc-name">${d.name}</div>
+            <div style="font-size:9px;color:var(--muted)">Lotto ${lot}</div>
+          </div>
+          <div class="sc-tot">${fmt(d.tot)} m</div>
+        </div>`;
+      GROUPS.forEach(g=>{
+        const m=d[g.k]||0; if(m<=0) return;
+        const pct=d.tot>0?m/d.tot*100:0;
+        h+=`<div class="sc-row">
+          <span class="sc-l">${g.label}</span>
+          <div class="pb" style="height:5px"><div class="pb-f" style="width:${pct}%;background:${g.col}"></div></div>
+          <span class="sc-n" style="color:${g.col}">${pct.toFixed(1)}%<br><span style="font-size:8px;color:var(--muted)">${fmt(m)} m</span></span>
+        </div>`;
+      });
+      h+=`</div>`;
+    });
+
+    h+=`</div></div>`;
+  });
+
+  h+=`</div>`;
+  permitCard.innerHTML = h;
 }
 init();
 </script>
