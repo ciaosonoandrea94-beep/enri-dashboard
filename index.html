@@ -246,8 +246,8 @@
       <button onclick="chiudiParamPrev()" style="margin-left:auto;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1">✕</button>
     </div>
     <div style="font-size:10px;color:var(--muted);margin-bottom:18px;line-height:1.5">
-      Giorni attesi per il rilascio dell'autorizzazione, dal momento dell'invio, per ciascuna tipologia di ente.
-      La soglia <em>In scadenza</em> determina quanti giorni prima della scadenza appare l'avviso arancione.
+      Giorni massimi attesi per il rilascio dell'autorizzazione, dal momento dell'invio, per ciascuna tipologia di ente.
+      La soglia <em>In scadenza</em> determina quanti giorni prima della scadenza appare l'avviso arancione. Il <strong>Comune di Milano</strong> ha una regola separata dagli altri comuni.
     </div>
     <div id="paramPrevForm" style="display:flex;flex-direction:column;gap:14px">
       <!-- rows injected by JS -->
@@ -2829,9 +2829,10 @@ async function loadMaster() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── MODAL PARAMETRI PREVISIONI ────────────────────────────────────────────────
-const PREV_PARAMS_DEFAULT = { comune:45, provincia:60, anas:90, altri:180, warnDays:7 };
+const PREV_PARAMS_DEFAULT = { comuneMilano:60, comune:45, provincia:60, anas:90, altri:180, warnDays:7 };
 const PREV_PARAMS_LABELS  = [
-  { key:'comune',   label:'Comune',              desc:'es. Comune di Settimo Milanese' },
+  { key:'comuneMilano',label:'Comune di Milano',     desc:'⭐ Regola specifica solo per il Comune di Milano' },
+  { key:'comune',   label:'Comune',              desc:'es. Comune di Settimo Milanese (tutti gli altri comuni)' },
   { key:'provincia',label:'Provincie', desc:'es. Provincia di Milano' },
   { key:'anas',     label:'ANAS',                desc:'Strade statali' },
   { key:'altri',    label:'Altri enti',          desc:'Ferrovie, RFI, ecc.' },
@@ -3049,10 +3050,16 @@ function closeModalKpi(e) {
 
 // ── PREVISIONE RILASCIO ───────────────────────────────────────────────────────
 function giorniPerEnte(ente) {
-  const p = window.PREV_PARAMS || { comune:45, provincia:60, anas:90, altri:180 };
+  const p = window.PREV_PARAMS || { comuneMilano:60, comune:45, provincia:60, anas:90, altri:180 };
   if (!ente) return p.altri;
   const u = ente.toUpperCase();
-  if (u.includes('COMUNE') || u.includes('MUNICIPALITY')) return p.comune;
+  if (u.includes('COMUNE') || u.includes('MUNICIPALITY')) {
+    // Regola specifica: Comune di Milano usa comuneMilano
+    if (u.includes('MILANO') && !u.includes('MILANESE') && !u.includes('CORSICO') && !u.includes('CINISELLO') && !u.includes('SESTO') && !u.includes('ROZZANO')) {
+      return p.comuneMilano ?? 60;
+    }
+    return p.comune;
+  }
   if (u.includes('PROVINCIA') || u.includes('PROVINCE')) return p.provincia;
   if (u.includes('ANAS')) return p.anas;
   return p.altri;
@@ -3079,7 +3086,7 @@ function calcolaPrevisione(p) {
 
 // Parametri previsione (modificabili dall'utente)
 window.PREV_PARAMS = JSON.parse(localStorage.getItem('ENRI_PREV_PARAMS') || 'null') || {
-  comune: 45, provincia: 60, anas: 90, altri: 180, warnDays: 7
+  comuneMilano: 60, comune: 45, provincia: 60, anas: 90, altri: 180, warnDays: 7
 };
 
 function prevBadgeHtml(p) {
