@@ -385,7 +385,7 @@
 // ── EXPORT EXCEL ──────────────────────────────────────────────────────────────
 function exportXlsx(pratiche, filename) {
   if (!pratiche || !pratiche.length) { alert('Nessuna pratica da esportare.'); return; }
-  const header = ['Codice', 'Tipo', 'Lotto', 'Stato', 'Ente', 'Data Invio', 'Data Agg./Prot./Ott.', 'Prev. Rilascio', 'Giorni Rimanenti', 'Metri (m)'];
+  const header = ['Codice', 'Tipo', 'Lotto', 'Stato', 'Ente', 'Data Invio', 'Data Update', 'Prev. Rilascio', 'Giorni Rimanenti', 'Metri (m)'];
   const rows = pratiche.map(p => {
     const dateParts = buildDateParts(p);
     const invio = dateParts.find(d => d.startsWith('Invio:'))?.replace('Invio: ','') || '';
@@ -878,7 +878,7 @@ function openModal(lotto, statiMetri, totale) {
       <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:left;font-weight:600;background:var(--surface2)">Ente</th>
       <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:left;font-weight:600;background:var(--surface2)">Stato</th>
       <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:center;font-weight:600;background:var(--surface2)">Invio</th>
-      <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:center;font-weight:600;background:var(--surface2)">Agg./Prot./Ott.</th>
+      <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:center;font-weight:600;background:var(--surface2)">Update</th>
       <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:center;font-weight:600;background:var(--surface2)">Prev. Rilascio</th>
       <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:right;font-weight:600;background:var(--surface2)">Metri</th>
     </tr>`;
@@ -1026,7 +1026,7 @@ function openModalCluster(cl, statiMap, totale) {
       <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:left;font-weight:600;background:var(--surface2)">Ente</th>
       <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:left;font-weight:600;background:var(--surface2)">Stato</th>
       <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:center;font-weight:600;background:var(--surface2)">Invio</th>
-      <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:center;font-weight:600;background:var(--surface2)">Agg./Prot./Ott.</th>
+      <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:center;font-weight:600;background:var(--surface2)">Update</th>
       <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:center;font-weight:600;background:var(--surface2)">Prev. Rilascio</th>
       <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:right;font-weight:600;background:var(--surface2)">Metri</th>
     </tr>`;
@@ -2977,7 +2977,7 @@ function openModalKpi(key) {
     <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:left;font-weight:600;background:var(--surface2)">Ente</th>
     <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:left;font-weight:600;background:var(--surface2)">Stato</th>
     <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:center;font-weight:600;background:var(--surface2)">Invio</th>
-    <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:center;font-weight:600;background:var(--surface2)">Agg./Prot./Ott.</th>
+    <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:center;font-weight:600;background:var(--surface2)">Update</th>
     ${_showPrev ? `<th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:center;font-weight:600;background:var(--surface2)">Prev. Rilascio</th>` : ''}
     <th style="padding:5px 10px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);text-align:right;font-weight:600;background:var(--surface2)">Metri</th>
   </tr>`;
