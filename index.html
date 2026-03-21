@@ -450,8 +450,8 @@ const COLORS = {
 // Gruppi visivi per le barre — gli stati vengono accorpati prima del rendering
 const STATI_GRUPPI = [
   { label: 'In Attesa / Redazione', stati: ['IN ATTESA','IN REDAZIONE','IN REDAZIONE INTEGRAZIONE'], color: '#4a4f6a' },
-  { label: 'In Verifica / In Firma', stati: ['IN FIRMA RDS'],                                         color: '#e07b3a' },
   { label: 'Coordinamento',          stati: ['COORDINAMENTO'],                                         color: '#9b59b6' },
+  { label: 'In Verifica / In Firma', stati: ['IN FIRMA RDS'],                                         color: '#e07b3a' },
   { label: 'Inviato / Protocollato',stati: ['INVIATO','PROTOCOLLATO'],                               color: '#4f8ef7' },
   { label: 'Necessaria Integrazione',stati: ['NECESSARIA INTEGRAZIONE'],                             color: '#cc3333' },
   { label: 'Protocollato Integrazione',stati: ['PROTOCOLLATO INTEGRAZIONE'],                        color: '#548235' },
@@ -471,8 +471,8 @@ function buildGruppiMap(statiMap) {
 function renderBarre(gruppiMap, totale, tooltip, onHover) {
   // Ordine workflow sinistra→destra, grigio (In Attesa) sempre a destra
   const ORDINE_WORKFLOW = [
-    'In Verifica / In Firma',
     'Coordinamento',
+    'In Verifica / In Firma',
     'Inviato / Protocollato',
     'Necessaria Integrazione',
     'Protocollato Integrazione',
@@ -1980,8 +1980,8 @@ function renderStoricoModal() {
 
   const STATI_TABELLA = [
     { label: 'In Attesa / Red.',  stati: ['IN ATTESA','IN REDAZIONE','IN REDAZIONE INTEGRAZIONE'], color: '#4a4f6a' },
-    { label: 'In Firma RDS',      stati: ['IN FIRMA RDS'],                                         color: '#e07b3a' },
     { label: 'Coordinamento',     stati: ['COORDINAMENTO'],                                         color: '#9b59b6' },
+    { label: 'In Firma RDS',      stati: ['IN FIRMA RDS'],                                         color: '#e07b3a' },
     { label: 'Inviato / Prot.',   stati: ['INVIATO','PROTOCOLLATO'],                               color: '#4f8ef7' },
     { label: 'Nec. Integraz.',    stati: ['NECESSARIA INTEGRAZIONE'],                              color: '#cc3333' },
     { label: 'Prot. Integraz.',   stati: ['PROTOCOLLATO INTEGRAZIONE'],                            color: '#548235' },
@@ -2127,8 +2127,8 @@ window.storicoToggleView = function(mode) {
 
   const STATI_G = [
     { label: 'In Attesa / Red.',  stati: ['IN ATTESA','IN REDAZIONE','IN REDAZIONE INTEGRAZIONE'], color: '#4a5080' },
-    { label: 'In Firma RDS',      stati: ['IN FIRMA RDS'],                                         color: '#e07b3a' },
     { label: 'Coordinamento',     stati: ['COORDINAMENTO'],                                         color: '#9b59b6' },
+    { label: 'In Firma RDS',      stati: ['IN FIRMA RDS'],                                         color: '#e07b3a' },
     { label: 'Inviato / Prot.',   stati: ['INVIATO','PROTOCOLLATO'],                               color: '#4f8ef7' },
     { label: 'Nec. Integraz.',    stati: ['NECESSARIA INTEGRAZIONE'],                              color: '#cc3333' },
     { label: 'Prot. Integraz.',   stati: ['PROTOCOLLATO INTEGRAZIONE'],                            color: '#548235' },
@@ -2358,8 +2358,8 @@ function _buildStoricoChart(storico, labels, datasets, yMax, mode) {
 
   const STATI_ATTESA_SET = new Set(['IN ATTESA','IN REDAZIONE','IN REDAZIONE INTEGRAZIONE']);
   const STATI_DETTAGLIO = [
-    { label: 'In Firma RDS',           stati: ['IN FIRMA RDS'],                    color: '#e07b3a' },
     { label: 'Coordinamento',          stati: ['COORDINAMENTO'],                   color: '#9b59b6' },
+    { label: 'In Firma RDS',           stati: ['IN FIRMA RDS'],                    color: '#e07b3a' },
     { label: 'Inviato / Prot.',        stati: ['INVIATO','PROTOCOLLATO'],           color: '#4f8ef7' },
     { label: 'Nec. Integraz.',         stati: ['NECESSARIA INTEGRAZIONE'],          color: '#cc3333' },
     { label: 'Prot. Integraz.',        stati: ['PROTOCOLLATO INTEGRAZIONE'],        color: '#548235' },
