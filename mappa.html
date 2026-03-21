@@ -189,9 +189,9 @@
       <div class="legend-item"><div class="legend-line" style="background:#548235"></div>Prot. Integrazione</div>
       <div class="legend-item"><div class="legend-line" style="background:#cc3333"></div>Nec. Integrazione</div>
       <div class="legend-item"><div class="legend-line" style="background:#4f8ef7"></div>Inviato / Protocollato</div>
-      <div class="legend-item"><div class="legend-line" style="background:#9b59b6"></div>Coordinamento</div>
       <div class="legend-item"><div class="legend-line" style="background:#e07b3a"></div>In Verifica / Firma</div>
       <div class="legend-item"><div class="legend-line" style="background:#4a4f6a"></div>In Attesa / Redazione</div>
+      <div class="legend-item"><div class="legend-line" style="background:#9b59b6"></div>Coordinamento</div>
     </div>
   </div>
 </div>
@@ -267,19 +267,19 @@ function setViewMode(mode) {
       if (l.feature) l.setStyle({ color: getColorForMode(l.feature, mode), weight:4, opacity:0.95 });
     });
     if (!map.hasLayer(layer)) map.addLayer(layer);
-    // outline visibile solo in lotto/cluster
     if (outlineLayer) {
       outlineLayer.eachLayer(l => l.setStyle({ opacity: useOutline ? 0.55 : 0 }));
       if (!map.hasLayer(outlineLayer)) map.addLayer(outlineLayer);
-      // outline deve stare sotto il layer principale
       outlineLayer.bringToBack();
     }
   });
   updateLegend(mode);
   if (mode === 'cluster') {
-    renderFilterCluster();
-  } else {
+    renderFilterCluster(); // genera filtro E legenda cluster con colori reali
+  } else if (mode === 'lotto') {
     renderFilterLotto(lottoStats);
+  } else {
+    renderFilterStato();
   }
 }
 
@@ -318,13 +318,80 @@ function renderFilterLotto(stats) {
   });
 }
 
+function renderFilterStato() {
+  const fr = document.getElementById('filterRow');
+  const title = fr.previousElementSibling;
+  if (title) title.textContent = 'Filtra per stato';
+  fr.innerHTML = '';
+
+  const btnT = document.createElement('button');
+  btnT.className = 'filter-btn active'; btnT.textContent = 'Tutti';
+  btnT.onclick = () => applyFilterStato('TUTTI');
+  fr.appendChild(btnT);
+
+  const STATO_ORDER = [
+    ['OTTENUTO',                  '#3a8c5c', 'Ottenuto'],
+    ['PROTOCOLLATO INTEGRAZIONE', '#548235', 'Prot. Integrazione'],
+    ['NECESSARIA INTEGRAZIONE',   '#cc3333', 'Nec. Integrazione'],
+    ['INVIATO',                   '#4f8ef7', 'Inviato / Prot.'],
+    ['COORDINAMENTO',             '#9b59b6', 'Coordinamento'],
+    ['IN FIRMA RDS',              '#e07b3a', 'In Verifica / Firma'],
+    ['IN ATTESA',                 '#4a4f6a', 'In Attesa / Red.'],
+  ];
+  STATO_ORDER.forEach(([key, color, label]) => {
+    const b = document.createElement('button');
+    b.className = 'filter-btn'; b.id = 'sbtn-' + key;
+    b.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};margin-right:4px;flex-shrink:0"></span>${label}`;
+    b.style.cssText = `border-color:${color}66; display:flex; align-items:center;`;
+    b.onclick = () => applyFilterStato(key);
+    fr.appendChild(b);
+  });
+}
+
+function applyFilterStato(stato) {
+  currentFilter = stato;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  if (stato === 'TUTTI') {
+    document.querySelector('.filter-btn').classList.add('active');
+    allLayers.forEach(({layer}) => {
+      layer.eachLayer(l => { if(l.feature) l.setStyle({color: getColorForMode(l.feature,'stato'), weight:4, opacity:0.95}); });
+      if (!map.hasLayer(layer)) map.addLayer(layer);
+    });
+    const g = L.featureGroup(allLayers.map(x => x.layer));
+    map.fitBounds(g.getBounds(), {padding:[40,40]});
+  } else {
+    const fb = document.getElementById('sbtn-' + stato); if(fb) fb.classList.add('active');
+    // INVIATO e PROTOCOLLATO sono entrambi blu — trattali insieme
+    const matchKeys = stato === 'INVIATO' ? ['INVIATO','PROTOCOLLATO'] : [stato];
+    // IN ATTESA include anche IN REDAZIONE
+    if (stato === 'IN ATTESA') matchKeys.push('IN REDAZIONE','IN REDAZIONE INTEGRAZIONE');
+    const matchLayers = [];
+    allLayers.forEach(({layer}) => {
+      if (!map.hasLayer(layer)) map.addLayer(layer);
+      layer.eachLayer(l => {
+        if (!l.feature) return;
+        const s = l.feature.properties.STATO_LEGENDA || l.feature.properties.STATO_AUTORIZZAZIONE || 'IN ATTESA';
+        if (matchKeys.includes(s)) {
+          matchLayers.push(l);
+          l.setStyle({ opacity: 0.95, weight: 4, color: getColor(s) });
+        } else {
+          l.setStyle({ opacity: 0.08, weight: 2 });
+        }
+      });
+    });
+    if (matchLayers.length > 0) {
+      const g = L.featureGroup(matchLayers);
+      map.fitBounds(g.getBounds(), {padding:[60,60], maxZoom:14});
+    }
+  }
+}
+
 function renderFilterCluster() {
   const fr = document.getElementById('filterRow');
   const title = fr.previousElementSibling;
   if (title) title.textContent = 'Filtra per cluster';
-  fr.innerHTML='';
+  fr.innerHTML = '';
 
-  // Raccogli cluster unici dal GeoJSON
   const clusters = new Set();
   allFeatures.forEach(f => {
     const cl = f.properties.CLUSTER ?? f.properties.ID_CLUSTER ?? f.properties.cluster;
@@ -333,19 +400,32 @@ function renderFilterCluster() {
   const clSorted = [...clusters].sort((a,b) => parseInt(a)-parseInt(b) || a.localeCompare(b));
 
   const btnT = document.createElement('button');
-  btnT.className='filter-btn active'; btnT.textContent='Tutti';
-  btnT.onclick=()=>applyFilterCluster('TUTTI');
+  btnT.className = 'filter-btn active'; btnT.textContent = 'Tutti';
+  btnT.onclick = () => applyFilterCluster('TUTTI');
   fr.appendChild(btnT);
 
   clSorted.forEach(cl => {
     const color = getClusterColor(cl);
     const b = document.createElement('button');
-    b.className='filter-btn'; b.id='cbtn-'+cl;
-    b.textContent = 'C'+cl;
-    b.style.cssText = `border-color:${color}44;`;
-    b.onclick=()=>applyFilterCluster(cl);
+    b.className = 'filter-btn'; b.id = 'cbtn-' + cl;
+    b.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};margin-right:4px;flex-shrink:0"></span>C${cl}`;
+    b.style.cssText = `border-color:${color}66; display:flex; align-items:center;`;
+    b.onclick = () => applyFilterCluster(cl);
     fr.appendChild(b);
   });
+
+  // Aggiorna la legenda con i cluster reali
+  updateLegendCluster(clSorted);
+}
+
+function updateLegendCluster(clSorted) {
+  const leg = document.getElementById('legendContainer');
+  if (!leg) return;
+  const items = clSorted.map(cl => {
+    const color = getClusterColor(cl);
+    return `<div class="legend-item"><div class="legend-line" style="background:${color}"></div>Cluster ${cl}</div>`;
+  }).join('');
+  leg.innerHTML = `<div class="legend-title">Cluster</div>${items}`;
 }
 
 function applyFilterCluster(cl) {
@@ -408,10 +488,8 @@ function updateLegend(mode) {
       `<div class="legend-item"><div class="legend-line" style="background:${c}"></div>Lotto ${l}</div>`
     ).join('');
     leg.innerHTML = `<div class="legend-title">Lotto</div>${items}`;
-  } else {
-    leg.innerHTML = `<div class="legend-title">Cluster</div>
-      <div style="font-size:9px;color:var(--muted);line-height:1.5;padding-top:4px">Ogni cluster ha colore univoco.<br>Passa il mouse sulle tratte per il dettaglio.</div>`;
   }
+  // cluster: la legenda viene generata da updateLegendCluster() dentro renderFilterCluster()
 }
 
 map = L.map('map',{center:[45.48,9.30],zoom:10,zoomControl:true,attributionControl:true});
@@ -522,7 +600,7 @@ function buildLottoStats(features) {
 }
 
 function renderSidebar(stats) {
-  renderFilterLotto(stats);
+  renderFilterStato(); // modo iniziale è 'stato'
 
   const list=document.getElementById('lottoList');
   list.innerHTML='';
