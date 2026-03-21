@@ -606,6 +606,7 @@ function clearSearch() {
   resultsEl.style.display = 'none';
   clearBtn.style.display = 'none';
   if (searchMarker) { map.removeLayer(searchMarker); searchMarker = null; }
+  clearHighlight();
 }
 
 // Cerca pratiche nel dataset GeoJSON
@@ -708,24 +709,37 @@ function renderResults(pratiche, addresses, query) {
   resultsEl.style.display = 'block';
 }
 
+let _highlightedLayer = null;
+
+function clearHighlight() {
+  if (_highlightedLayer) {
+    _highlightedLayer.setStyle({
+      weight: 4, opacity: 0.95,
+      color: getColorForMode(_highlightedLayer.feature, currentViewMode)
+    });
+    _highlightedLayer = null;
+  }
+}
+
 function zoomToFeature(feature) {
-  // Trova il layer corrispondente
   let targetLayer = null;
   allLayers.forEach(({layer}) => {
-    layer.eachLayer(l => {
-      if (l.feature === feature) targetLayer = l;
-    });
+    layer.eachLayer(l => { if (l.feature === feature) targetLayer = l; });
   });
   if (targetLayer) {
     const bounds = targetLayer.getBounds ? targetLayer.getBounds() : null;
     const latlng = bounds ? bounds.getCenter() : targetLayer.getLatLng?.();
     if (latlng) {
       map.setView(latlng, 15);
+      // Rimuovi highlight precedente
+      clearHighlight();
+      // Evidenzia in giallo brillante, persistente
+      targetLayer.setStyle({ weight: 7, opacity: 1, color: '#ffe600' });
+      targetLayer.bringToFront();
+      _highlightedLayer = targetLayer;
       targetLayer.openPopup();
-      // Evidenzia la tratta
-      const origStyle = { weight: 4, opacity: 0.95 };
-      targetLayer.setStyle({ weight: 8, opacity: 1, color: '#fff' });
-      setTimeout(() => targetLayer.setStyle({ ...origStyle, color: getColorForMode(targetLayer.feature, currentViewMode) }), 2000);
+      // Rimuovi highlight alla chiusura del popup
+      targetLayer.once('popupclose', clearHighlight);
     }
   }
   resultsEl.style.display = 'none';
