@@ -6,6 +6,7 @@
 <meta name="google" content="notranslate">
 <title>ENRI — Avanzamento Progettazione</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -35,6 +36,8 @@
   .filter-btn{font-size:10px;padding:3px 7px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;transition:all 0.15s;font-family:'DM Sans',sans-serif;}
   .filter-btn:hover{border-color:var(--accent);color:var(--text);}
   .filter-btn.active{background:var(--accent);border-color:var(--accent);color:white;}
+  .filter-btn.selected{background:var(--accent);border-color:var(--accent);color:white;opacity:0.85;}
+  .filter-multi-hint{font-size:9px;color:var(--muted);margin-top:4px;display:block;}
   .sidebar-body{flex:1;overflow-y:auto;}
   .sidebar-body::-webkit-scrollbar{width:4px;}
   .sidebar-body::-webkit-scrollbar-track{background:transparent;}
@@ -163,6 +166,7 @@
   <div class="topbar-right">
     <span class="badge" id="statusBadge">⏳ Caricamento</span>
     <button class="btn" style="background:#2f5496" onclick="exportPDF()">⬇ PDF</button>
+    <button class="btn" style="background:#1a5c3a" onclick="exportImage()">🖼 Immagine</button>
     <a href="index.html" class="btn secondary">← Dashboard</a>
   </div>
 </div>
@@ -244,20 +248,22 @@ function getColorForMode(feature, mode) {
 function setViewMode(mode) {
   currentViewMode = mode;
   currentFilter = 'TUTTI';
+  // Reset multi-selezioni
+  if(typeof selectedLotti !== 'undefined') selectedLotti.clear();
+  if(typeof selectedClusters !== 'undefined') selectedClusters.clear();
   ['stato','lotto','cluster'].forEach(m => {
     const btn = document.getElementById('vbtn-'+m);
     if (btn) btn.className = 'view-btn' + (m === mode ? ' active' : '');
   });
-  // Re-stila tutti i layer
-  allLayers.forEach(({layer}) => {
+  // Re-stila tutti i layer e mostra tutti
+  allLayers.forEach(({layer,outlineLayer}) => {
     layer.eachLayer(l => {
       if (l.feature) l.setStyle({ color: getColorForMode(l.feature, mode), weight:4, opacity:0.95 });
     });
-    // Mostra tutti i layer
     if (!map.hasLayer(layer)) map.addLayer(layer);
+    if(outlineLayer){ if(!map.hasLayer(outlineLayer)) map.addLayer(outlineLayer); outlineLayer.bringToBack(); }
   });
   updateLegend(mode);
-  // Ricostruisce il filtro in base alla modalità
   if (mode === 'cluster') {
     renderFilterCluster();
   } else {
@@ -265,14 +271,19 @@ function setViewMode(mode) {
   }
 }
 
+// Set dei lotti selezionati (multi-selezione)
+let selectedLotti = new Set();
+
 function renderFilterLotto(stats) {
   const fr = document.getElementById('filterRow');
   const title = fr.previousElementSibling;
   if (title) title.textContent = 'Filtra per lotto';
   fr.innerHTML='';
+
   const btnT = document.createElement('button');
   btnT.className='filter-btn active'; btnT.textContent='Tutti';
-  btnT.onclick=()=>applyFilter('TUTTI');
+  btnT.id='fbtn-TUTTI';
+  btnT.onclick=()=>{ selectedLotti.clear(); applyFilterMulti(); };
   fr.appendChild(btnT);
 
   const sep0=document.createElement('span');
@@ -283,7 +294,7 @@ function renderFilterLotto(stats) {
     if(!stats[id]) return;
     const b=document.createElement('button');
     b.className='filter-btn'; b.id='fbtn-'+id; b.textContent=id;
-    b.onclick=()=>applyFilter(id);
+    b.onclick=()=>toggleLotto(id);
     fr.appendChild(b);
   });
 
@@ -295,10 +306,62 @@ function renderFilterLotto(stats) {
     if(!stats[id]) return;
     const b=document.createElement('button');
     b.className='filter-btn'; b.id='fbtn-'+id; b.textContent=id;
-    b.onclick=()=>applyFilter(id);
+    b.onclick=()=>toggleLotto(id);
     fr.appendChild(b);
   });
+
+  const hint = document.createElement('span');
+  hint.className = 'filter-multi-hint';
+  hint.textContent = 'Clicca più lotti per combinarli';
+  fr.appendChild(hint);
 }
+
+function toggleLotto(id) {
+  if (selectedLotti.has(id)) {
+    selectedLotti.delete(id);
+  } else {
+    selectedLotti.add(id);
+  }
+  applyFilterMulti();
+}
+
+function applyFilterMulti() {
+  // Aggiorna visual dei bottoni
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active','selected'));
+  if (selectedLotti.size === 0) {
+    const btnT = document.getElementById('fbtn-TUTTI');
+    if (btnT) btnT.classList.add('active');
+    // Mostra tutti
+    allLayers.forEach(({layer,outlineLayer}) => {
+      if(!map.hasLayer(layer)) map.addLayer(layer);
+      if(outlineLayer){ if(!map.hasLayer(outlineLayer)) map.addLayer(outlineLayer); outlineLayer.bringToBack(); }
+    });
+    const g=L.featureGroup(allLayers.map(x=>x.layer));
+    map.fitBounds(g.getBounds(),{padding:[40,40]});
+  } else {
+    selectedLotti.forEach(id => {
+      const fb = document.getElementById('fbtn-'+id);
+      if (fb) fb.classList.add('selected');
+    });
+    // Mostra/nascondi per lotto selezionato
+    allLayers.forEach(({layer,outlineLayer,lotto:l}) => {
+      const vis = selectedLotti.has(l);
+      if(vis){ if(!map.hasLayer(layer)) map.addLayer(layer); if(outlineLayer&&!map.hasLayer(outlineLayer)) map.addLayer(outlineLayer); }
+      else { if(map.hasLayer(layer)) map.removeLayer(layer); if(outlineLayer&&map.hasLayer(outlineLayer)) map.removeLayer(outlineLayer); }
+      if(outlineLayer&&vis) outlineLayer.bringToBack();
+    });
+    // Zoom su tutti i lotti selezionati
+    const visLayers = allLayers.filter(x=>selectedLotti.has(x.lotto)).map(x=>x.layer);
+    if(visLayers.length>0){ const g=L.featureGroup(visLayers); map.fitBounds(g.getBounds(),{padding:[60,60],maxZoom:13}); }
+  }
+  // Aggiorna highlight sidebar
+  document.querySelectorAll('.lotto-item').forEach(el => el.classList.remove('active'));
+  selectedLotti.forEach(id => { const li=document.getElementById('li-'+id); if(li) li.classList.add('active'); });
+  currentFilter = selectedLotti.size === 1 ? [...selectedLotti][0] : (selectedLotti.size === 0 ? 'TUTTI' : 'MULTI');
+}
+
+// Set dei cluster selezionati (multi-selezione)
+let selectedClusters = new Set();
 
 function renderFilterCluster() {
   const fr = document.getElementById('filterRow');
@@ -306,7 +369,6 @@ function renderFilterCluster() {
   if (title) title.textContent = 'Filtra per cluster';
   fr.innerHTML='';
 
-  // Raccogli cluster unici dal GeoJSON
   const clusters = new Set();
   allFeatures.forEach(f => {
     const cl = f.properties.CLUSTER ?? f.properties.ID_CLUSTER ?? f.properties.cluster;
@@ -316,7 +378,8 @@ function renderFilterCluster() {
 
   const btnT = document.createElement('button');
   btnT.className='filter-btn active'; btnT.textContent='Tutti';
-  btnT.onclick=()=>applyFilterCluster('TUTTI');
+  btnT.id='cbtn-TUTTI';
+  btnT.onclick=()=>{ selectedClusters.clear(); applyFilterClusterMulti(); };
   fr.appendChild(btnT);
 
   clSorted.forEach(cl => {
@@ -325,19 +388,29 @@ function renderFilterCluster() {
     b.className='filter-btn'; b.id='cbtn-'+cl;
     b.textContent = 'C'+cl;
     b.style.cssText = `border-color:${color}44;`;
-    b.onclick=()=>applyFilterCluster(cl);
+    b.onclick=()=>toggleCluster(cl);
     fr.appendChild(b);
   });
+
+  const hint = document.createElement('span');
+  hint.className = 'filter-multi-hint';
+  hint.textContent = 'Clicca più cluster per combinarli';
+  fr.appendChild(hint);
 }
 
-function applyFilterCluster(cl) {
-  currentFilter = cl;
-  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
-  if (cl === 'TUTTI') {
-    document.querySelector('.filter-btn').classList.add('active');
+function toggleCluster(cl) {
+  if (selectedClusters.has(cl)) { selectedClusters.delete(cl); }
+  else { selectedClusters.add(cl); }
+  applyFilterClusterMulti();
+}
+
+function applyFilterClusterMulti() {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active','selected'));
+  if (selectedClusters.size === 0) {
+    const btnT = document.getElementById('cbtn-TUTTI');
+    if (btnT) btnT.classList.add('active');
     allLayers.forEach(({layer,outlineLayer}) => {
       if(!map.hasLayer(layer)) map.addLayer(layer);
-      // Reset stile di ogni feature al valore normale
       layer.eachLayer(l => {
         if(l.feature) l.setStyle({ opacity: 0.95, weight: 4, color: getColorForMode(l.feature, currentViewMode) });
       });
@@ -350,21 +423,21 @@ function applyFilterCluster(cl) {
     const g=L.featureGroup(allLayers.map(x=>x.layer));
     map.fitBounds(g.getBounds(),{padding:[40,40]});
   } else {
-    const fb = document.getElementById('cbtn-'+cl); if(fb) fb.classList.add('active');
+    selectedClusters.forEach(cl => { const fb=document.getElementById('cbtn-'+cl); if(fb) fb.classList.add('selected'); });
     const matchLayers = [];
     allLayers.forEach(({layer,outlineLayer}) => {
       if(!map.hasLayer(layer)) map.addLayer(layer);
       layer.eachLayer(l => {
         if (!l.feature) return;
         const fcl = String(l.feature.properties.CLUSTER ?? l.feature.properties.ID_CLUSTER ?? l.feature.properties.cluster ?? '');
-        if (fcl === cl) { matchLayers.push(l); l.setStyle({ opacity: 0.95, weight: 4 }); }
+        if (selectedClusters.has(fcl)) { matchLayers.push(l); l.setStyle({ opacity: 0.95, weight: 4 }); }
         else { l.setStyle({ opacity: 0.08, weight: 2 }); }
       });
       if(outlineLayer){
         outlineLayer.eachLayer(l => {
           if(!l.feature) return;
           const fcl = String(l.feature.properties.CLUSTER ?? l.feature.properties.ID_CLUSTER ?? l.feature.properties.cluster ?? '');
-          l.setStyle({ opacity: fcl===cl ? 0.4 : 0 });
+          l.setStyle({ opacity: selectedClusters.has(fcl) ? 0.4 : 0 });
         });
         outlineLayer.bringToBack();
       }
@@ -374,6 +447,13 @@ function applyFilterCluster(cl) {
       map.fitBounds(g.getBounds(), {padding:[60,60], maxZoom:14});
     }
   }
+}
+
+// applyFilterCluster mantenuto per compatibilità
+function applyFilterCluster(cl) {
+  if (cl === 'TUTTI') { selectedClusters.clear(); }
+  else { selectedClusters.clear(); selectedClusters.add(cl); }
+  applyFilterClusterMulti();
 }
 
 function updateLegend(mode) {
@@ -419,6 +499,33 @@ function exportPDF(){
   btn.textContent='⏳...'; btn.disabled=true;
   map.invalidateSize();
   setTimeout(()=>{window.print();btn.textContent='⬇ PDF';btn.disabled=false;},500);
+}
+
+function exportImage(){
+  const btn=document.querySelector('[onclick="exportImage()"]');
+  btn.textContent='⏳...'; btn.disabled=true;
+  map.invalidateSize();
+  // Breve attesa per render tiles
+  setTimeout(async ()=>{
+    try {
+      const wrap = document.querySelector('.wrap');
+      const canvas = await html2canvas(wrap, {
+        useCORS: true,
+        allowTaint: true,
+        scale: 2,
+        backgroundColor: '#0f1117',
+        logging: false,
+        ignoreElements: el => el.id === 'loadingOverlay'
+      });
+      const link = document.createElement('a');
+      link.download = 'ENRI_Mappa_' + new Date().toISOString().slice(0,10) + '.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch(e) {
+      alert('Errore durante la generazione dell'immagine: ' + e.message);
+    }
+    btn.textContent='🖼 Immagine'; btn.disabled=false;
+  }, 800);
 }
 
 function getColor(stato){ return STATO_COLORS[stato]||'#4a4f6a'; }
@@ -547,19 +654,11 @@ function renderSidebar(stats) {
   });
 }
 
+// applyFilter mantenuto per compatibilità
 function applyFilter(lotto) {
-  currentFilter=lotto;
-  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
-  if(lotto==='TUTTI') document.querySelector('.filter-btn').classList.add('active');
-  else { const fb=document.getElementById('fbtn-'+lotto); if(fb) fb.classList.add('active'); }
-  allLayers.forEach(({layer,outlineLayer,lotto:l})=>{
-    const vis=lotto==='TUTTI'||l===lotto;
-    if(vis){ if(!map.hasLayer(layer)) map.addLayer(layer); if(outlineLayer&&!map.hasLayer(outlineLayer)) map.addLayer(outlineLayer); }
-    else { if(map.hasLayer(layer)) map.removeLayer(layer); if(outlineLayer&&map.hasLayer(outlineLayer)) map.removeLayer(outlineLayer); }
-    if(outlineLayer&&vis) outlineLayer.bringToBack();
-  });
-  if(lotto!=='TUTTI') zoomLotto(lotto);
-  else { const g=L.featureGroup(allLayers.map(x=>x.layer)); map.fitBounds(g.getBounds(),{padding:[40,40]}); }
+  if (lotto === 'TUTTI') { selectedLotti.clear(); }
+  else { selectedLotti.clear(); selectedLotti.add(lotto); }
+  applyFilterMulti();
 }
 
 function zoomLotto(id) {
