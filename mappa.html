@@ -576,6 +576,22 @@ function exportImage(){
       const ctx = mapCanvas.getContext('2d');
       ctx.drawImage(rawCanvas, 0, 0, mapCanvas.width, mapCanvas.height);
 
+      // Overlay robusto: copia i canvas vettoriali reali visibili (tracciati)
+      const overlayCanvases = mapEl.querySelectorAll('.leaflet-overlay-pane canvas');
+      overlayCanvases.forEach((cv) => {
+        const r = cv.getBoundingClientRect();
+        const dw = Math.round(r.width * SCALE);
+        const dh = Math.round(r.height * SCALE);
+        if (dw <= 0 || dh <= 0) return;
+        const dx = Math.round((r.left - mapRect.left) * SCALE);
+        const dy = Math.round((r.top - mapRect.top) * SCALE);
+        try {
+          ctx.drawImage(cv, dx, dy, dw, dh);
+        } catch (_) {
+          // Ignora singoli canvas non disegnabili senza interrompere export
+        }
+      });
+
       // ── Legenda reale a schermo ─────────────────────────────────────────────
       const legendEl = document.getElementById('legendContainer');
       if (!legendEl) throw new Error('Legenda non trovata');
