@@ -631,7 +631,10 @@ async function jsonbinGetLastUpdateISO() {
     clearTimeout(tid);
     if (!res.ok) throw new Error('JSONBin metadata load failed: ' + res.status);
     const json = await res.json();
-    return json?.record?.last_excel_upload_at || json?.metadata?.updatedAt || json?.metadata?.createdAt || null;
+    const record = json?.record || {};
+    const storico = Array.isArray(record.storico) ? record.storico : [];
+    const storicoLastTs = storico.length > 0 ? storico[storico.length - 1]?.ts : null;
+    return record.last_excel_upload_at || storicoLastTs || json?.metadata?.updatedAt || json?.metadata?.createdAt || null;
   } catch (e) {
     clearTimeout(tid);
     throw e;
@@ -1469,7 +1472,7 @@ async function loadData(saveSnapshot = false) {
       console.warn('Impossibile leggere metadata JSONBin:', e);
     }
     if (!_luDate || Number.isNaN(_luDate.getTime())) _luDate = new Date();
-    const _dateStr = _luDate.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'}) + ' ' + _luDate.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+    const _dateStr = _luDate.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
     const _lu = document.getElementById('lastUpdate');
     if(_lu) _lu.innerHTML = `<span>📅 ${_dateStr}</span>`;
     document.getElementById('loadingScreen').style.display = 'none';
