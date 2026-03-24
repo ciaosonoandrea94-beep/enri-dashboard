@@ -269,7 +269,7 @@ const LOTTO_COLORS = {
   '1A':'#4f8ef7','1B':'#89bfff',
   '2A':'#e07b3a','2B':'#f7a96a',
   '1':'#3a8c5c','2':'#5cb87a','3':'#c9a227','4':'#e8c050',
-  '5':'#cc3333','6':'#e06868','7':'#a07af7','8':'#c4a8ff'
+  '5':'#cc3333','6':'#e06868','7':'#a07af7','8':'#ffffff'
 };
 
 // Palette colori per cluster (30 colori distinti)
@@ -283,6 +283,7 @@ const _CLUSTER_PALETTE = [
 
 function getClusterColor(cl) {
   if (cl == null || cl === '') return '#6b7080';
+  if (String(cl) === '2') return '#8b5cf6';
   const idx = Math.abs(parseInt(cl) || 0) % _CLUSTER_PALETTE.length;
   return _CLUSTER_PALETTE[idx];
 }
