@@ -159,7 +159,10 @@
   .qts-slider:before { content:'';position:absolute;height:14px;width:14px;left:3px;top:3px;background:#6b7080;border-radius:50%;transition:all 0.2s; }
   .qts-switch input:checked + .qts-slider { background:#0aa3c2; }
   .qts-switch input:checked + .qts-slider:before { transform:translateX(16px);background:#fff; }
-  .qts-km { font-size:10px;font-family:'DM Mono',monospace;color:#0aa3c2; }
+  .qts-km { font-size:10px;font-family:'DM Mono',monospace;color:#8b5cf6; }
+  .qts-only-btn{font-size:10px;padding:4px 10px;border-radius:12px;border:1px solid #8b5cf666;background:#8b5cf622;color:#c4b5fd;cursor:pointer;transition:all 0.15s;font-family:'DM Sans',sans-serif;}
+  .qts-only-btn:hover{border-color:#8b5cf6;color:#e9ddff;}
+  .qts-only-btn.active{background:#8b5cf6;border-color:#8b5cf6;color:#fff;}
 
   /* QTS toggle */
   .qts-toggle-row { display:flex;align-items:center;gap:8px;margin-top:10px;padding:8px 0 6px;border-top:1px solid var(--border); }
@@ -210,12 +213,13 @@
       <div class="filter-row" id="filterRow"></div>
     </div>
       <div class="qts-toggle-row">
-        <span class="qts-label">🔵 Tracciato QTS</span>
+        <span class="qts-label">🟣 Tracciato QTS</span>
         <span class="qts-km" id="qtsKm" style="display:none"></span>
         <label class="qts-switch">
           <input type="checkbox" id="qtsToggle" onchange="toggleQTS(this.checked)">
           <span class="qts-slider"></span>
         </label>
+        <button id="qtsOnlyBtn" class="qts-only-btn" onclick="setQTSOnly(!qtsOnlyMode)">Solo QTS</button>
       </div>
     <div class="sidebar-body" id="lottoList"></div>
     <div class="legend" id="legendContainer">
@@ -245,6 +249,7 @@ const LOTTI_AVVIO  = ['1','2','3','4','5','6','7','8'];
 
 let map, allLayers=[], currentFilter='TUTTI', lottoStats={};
 let currentViewMode = 'stato'; // 'stato' | 'lotto' | 'cluster'
+let qtsOnlyMode = false;
 
 // Colori per lotto
 const LOTTO_COLORS = {
@@ -294,6 +299,12 @@ function setViewMode(mode) {
     if (!map.hasLayer(layer)) map.addLayer(layer);
     if(outlineLayer){ if(!map.hasLayer(outlineLayer)) map.addLayer(outlineLayer); outlineLayer.bringToBack(); }
   });
+  if (qtsOnlyMode) {
+    allLayers.forEach(({layer,outlineLayer}) => {
+      if (map.hasLayer(layer)) map.removeLayer(layer);
+      if (outlineLayer && map.hasLayer(outlineLayer)) map.removeLayer(outlineLayer);
+    });
+  }
   updateLegend(mode);
   if (mode === 'cluster') {
     renderFilterCluster();
@@ -357,6 +368,7 @@ function toggleLotto(id) {
 }
 
 function applyFilterMulti() {
+  if (qtsOnlyMode) return;
   // Aggiorna visual dei bottoni
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active','selected'));
   if (selectedLotti.size === 0) {
@@ -436,6 +448,7 @@ function toggleCluster(cl) {
 }
 
 function applyFilterClusterMulti() {
+  if (qtsOnlyMode) return;
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active','selected'));
   if (selectedClusters.size === 0) {
     const btnT = document.getElementById('cbtn-TUTTI');
@@ -499,7 +512,8 @@ function updateLegend(mode) {
       <div class="legend-item"><div class="legend-line" style="background:#4f8ef7"></div>Inviato / Protocollato</div>
       <div class="legend-item"><div class="legend-line" style="background:#e07b3a"></div>In Verifica / Firma</div>
       <div class="legend-item"><div class="legend-line" style="background:#4a4f6a"></div>In Attesa / Redazione</div>
-      <div class="legend-item"><div class="legend-line" style="background:#9b59b6"></div>Coordinamento</div>`;
+      <div class="legend-item"><div class="legend-line" style="background:#9b59b6"></div>Coordinamento</div>
+      <div class="legend-item"><div class="legend-line" style="background:#8b5cf6"></div>Tracciato QTS</div>`;
   } else if (mode === 'lotto') {
     const items = Object.entries(LOTTO_COLORS).map(([l,c]) =>
       `<div class="legend-item"><div class="legend-line" style="background:${c}"></div>Lotto ${l}</div>`
@@ -522,7 +536,10 @@ function updateLegend(mode) {
 }
 
 map = L.map('map',{center:[45.48,9.30],zoom:10,zoomControl:true,attributionControl:true});
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  attribution:'© OpenStreetMap',
+  crossOrigin: true
+}).addTo(map);
 L.control.scale({imperial:false,position:'bottomright'}).addTo(map);
 
 function exportPDF(){
@@ -545,59 +562,19 @@ function exportImage(){
       const H = Math.round(mapRect.height);
       const SCALE = 2;
 
-      // ── Canvas mappa ────────────────────────────────────────────────────────
+      if (typeof leafletImage === 'undefined') throw new Error('leaflet-image non caricato');
+      const rawCanvas = await new Promise((resolve, reject) => {
+        leafletImage(map, function(err, canvas) {
+          if (err || !canvas) reject(err || new Error('render mappa fallito'));
+          else resolve(canvas);
+        });
+      });
+
       const mapCanvas = document.createElement('canvas');
-      mapCanvas.width  = W * SCALE;
+      mapCanvas.width = W * SCALE;
       mapCanvas.height = H * SCALE;
       const ctx = mapCanvas.getContext('2d');
-
-      // Sfondo neutro (simile a OSM light) — evita il problema CORS dei tile
-      ctx.fillStyle = '#e8e0d8';
-      ctx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
-
-      // Watermark "© OpenStreetMap" in basso a sinistra
-      ctx.fillStyle = 'rgba(0,0,0,0.45)';
-      ctx.font = (11 * SCALE) + 'px DM Sans, sans-serif';
-      ctx.fillText('© OpenStreetMap contributors', 8 * SCALE, (H - 6) * SCALE);
-
-      // ── Layer SVG (polylines Leaflet) ──────────────────────────────────────
-      const overlayPane = mapEl.querySelector('.leaflet-overlay-pane');
-      const svgEls = overlayPane ? overlayPane.querySelectorAll('svg') : [];
-
-      for (const svg of svgEls) {
-        const svgRect  = svg.getBoundingClientRect();
-        const sx = (svgRect.left - mapRect.left) * SCALE;
-        const sy = (svgRect.top  - mapRect.top)  * SCALE;
-        const sw = svgRect.width  * SCALE;
-        const sh = svgRect.height * SCALE;
-
-        const clone = svg.cloneNode(true);
-        clone.setAttribute('xmlns',       'http://www.w3.org/2000/svg');
-        clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
-        clone.setAttribute('width',  svgRect.width  || W);
-        clone.setAttribute('height', svgRect.height || H);
-
-        // Aumenta spessore linee per export ad alta risoluzione
-        clone.querySelectorAll('path, polyline, line').forEach(p => {
-          const sw = parseFloat(p.getAttribute('stroke-width') || p.style.strokeWidth || '4');
-          p.setAttribute('stroke-width', Math.max(sw, 3));
-        });
-
-        const svgStr  = new XMLSerializer().serializeToString(clone);
-        const svgBlob = new Blob([svgStr], {type: 'image/svg+xml;charset=utf-8'});
-        const svgUrl  = URL.createObjectURL(svgBlob);
-
-        await new Promise(res => {
-          const img = new Image();
-          img.onload  = () => {
-            ctx.drawImage(img, sx, sy, sw, sh);
-            URL.revokeObjectURL(svgUrl);
-            res();
-          };
-          img.onerror = () => { URL.revokeObjectURL(svgUrl); res(); };
-          img.src = svgUrl;
-        });
-      }
+      ctx.drawImage(rawCanvas, 0, 0, mapCanvas.width, mapCanvas.height);
 
       // ── Legenda ─────────────────────────────────────────────────────────────
       const legendEl = document.getElementById('legendContainer');
@@ -1003,7 +980,7 @@ document.addEventListener('click', e => {
 let qtsLayer = null;
 let qtsOutlineLayer = null;
 let qtsLoaded = false;
-const QTS_COLOR = '#29d0e8';
+const QTS_COLOR_HEX = '#8b5cf6';
 
 async function loadQTS() {
   if (qtsLoaded) return;
@@ -1023,18 +1000,18 @@ async function loadQTS() {
     });
 
     qtsLayer = L.geoJSON(geojson, {
-      style: () => ({ color: QTS_COLOR, weight:4, opacity:0.95, smoothFactor:1.5, dashArray:'8,6' }),
+      style: () => ({ color: QTS_COLOR_HEX, weight:4, opacity:0.95, smoothFactor:1.5, dashArray:'8,6' }),
       onEachFeature: (f, layer) => {
         const p = f.properties || {};
         const len = p.LUNGHEZZA || p.lunghezza || '';
         const desc = [p.NOME || p.nome || p.NAME || '', p.TRATTA_ID || p.tratta_id || ''].filter(Boolean).join(' — ');
         layer.bindPopup(`<div class="popup-inner">
           <div class="popup-header" style="border-color:#0aa3c255">
-            <span class="popup-lotto" style="color:${QTS_COLOR}">QTS</span>
-            ${desc ? `<span class="popup-impresa" style="color:${QTS_COLOR}">${desc}</span>` : ''}
+            <span class="popup-lotto" style="color:${QTS_COLOR_HEX}">QTS</span>
+            ${desc ? `<span class="popup-impresa" style="color:${QTS_COLOR_HEX}">${desc}</span>` : ''}
           </div>
           ${len ? `<div class="popup-row"><span class="label">Lunghezza</span><span class="val">${(Number(len)/1000).toFixed(3).replace('.',',')} km</span></div>` : ''}
-          <div style="margin-top:8px"><span class="popup-stato" style="background:#0aa3c222;color:${QTS_COLOR};border:1px solid #0aa3c244">Tracciato QTS</span></div>
+          <div style="margin-top:8px"><span class="popup-stato" style="background:#8b5cf622;color:${QTS_COLOR_HEX};border:1px solid #8b5cf644">Tracciato QTS</span></div>
         </div>`, {maxWidth:320});
         layer.on('mouseover', e => { e.target.setStyle({weight:7, opacity:1}); e.target.bringToFront(); });
         layer.on('mouseout',  e => { e.target.setStyle({weight:4, opacity:0.95}); });
@@ -1055,7 +1032,37 @@ async function loadQTS() {
   }
 }
 
+async function setQTSOnly(on) {
+  qtsOnlyMode = !!on;
+  const btn = document.getElementById('qtsOnlyBtn');
+  if (btn) btn.classList.toggle('active', qtsOnlyMode);
+
+  if (qtsOnlyMode) {
+    const tog = document.getElementById('qtsToggle');
+    if (tog && !tog.checked) {
+      tog.checked = true;
+      toggleQTS(true);
+    } else if (tog && tog.checked && !qtsLoaded) {
+      await loadQTS();
+      toggleQTS(true);
+    }
+    allLayers.forEach(({layer,outlineLayer}) => {
+      if (map.hasLayer(layer)) map.removeLayer(layer);
+      if (outlineLayer && map.hasLayer(outlineLayer)) map.removeLayer(outlineLayer);
+    });
+    if (qtsLayer) {
+      const g = L.featureGroup([qtsLayer]);
+      if (g.getBounds && g.getBounds().isValid()) map.fitBounds(g.getBounds(), { padding:[50,50], maxZoom:14 });
+    }
+    return;
+  }
+
+  if (currentViewMode === 'cluster') applyFilterClusterMulti();
+  else applyFilterMulti();
+}
+
 function toggleQTS(on) {
+  if (!on && qtsOnlyMode) setQTSOnly(false);
   if (on) {
     if (!qtsLoaded) {
       loadQTS().then(() => {
