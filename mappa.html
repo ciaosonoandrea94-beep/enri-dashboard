@@ -73,26 +73,46 @@
   .view-btn{font-size:10px;padding:3px 9px;border-radius:5px;border:none;background:transparent;color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;transition:all 0.15s;white-space:nowrap;}
   .view-btn.active{background:var(--accent);color:white;}
   /* Popup */
-  .leaflet-popup-content-wrapper{background:var(--surface)!important;border:1px solid var(--border)!important;border-radius:10px!important;color:var(--text)!important;box-shadow:0 8px 32px #00000018!important;padding:0!important;}
+  .leaflet-popup-content-wrapper{background:var(--surface)!important;border:none!important;border-radius:14px!important;color:var(--text)!important;box-shadow:0 8px 32px #0000002a, 0 1px 4px #00000014!important;padding:0!important;overflow:hidden!important;}
   .leaflet-popup-content{margin:0!important;width:auto!important;}
   .leaflet-popup-tip-container{display:none;}
-  .leaflet-popup-close-button{color:var(--muted)!important;font-size:18px!important;top:10px!important;right:12px!important;}
-  .popup-inner{padding:16px 18px;min-width:240px;max-width:320px;}
-  .popup-header{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);}
-  .popup-lotto{font-size:16px;font-weight:700;font-family:'DM Mono',monospace;}
-  .popup-impresa{font-size:11px;color:var(--accent);}
-  .popup-tratta{font-size:10px;color:var(--muted);margin-left:auto;}
-  .popup-row{display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:5px;}
-  .popup-row .label{color:var(--muted);}
-  .popup-row .val{font-family:'DM Mono',monospace;font-size:11px;text-align:right;max-width:170px;}
-  .popup-stato{display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;font-family:'DM Mono',monospace;margin-top:6px;}
-  .popup-section{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
-  .popup-section-title{font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:6px;}
-  .popup-pratica{display:inline-block;font-family:'DM Mono',monospace;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 7px;margin:2px 2px 2px 0;}
-  .popup-tag{display:inline-block;font-size:9px;padding:2px 7px;border-radius:10px;margin-right:4px;}
-  .popup-tag.ok{background:#3a8c5c22;color:#3a8c5c;border:1px solid #3a8c5c44;}
-  .popup-tag.warn{background:#c9a22722;color:#c9a227;border:1px solid #c9a22744;}
-  .popup-tag.err{background:#cc333322;color:#cc3333;border:1px solid #cc333344;}
+  .leaflet-popup-close-button{display:none!important;}
+  /* Popup layout */
+  .popup-inner{min-width:280px;max-width:340px;font-family:'DM Sans',sans-serif;}
+  .popup-head{padding:14px 16px 12px;position:relative;}
+  .popup-head-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+  .popup-lotto{font-size:18px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text);letter-spacing:-0.02em;}
+  .popup-close-btn{width:24px;height:24px;border-radius:50%;border:none;background:var(--surface2);color:var(--muted);cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background 0.15s,color 0.15s;}
+  .popup-close-btn:hover{background:var(--border);color:var(--text);}
+  .popup-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .popup-impresa{font-size:11px;font-weight:600;color:var(--accent);}
+  .popup-tratta{font-size:10px;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-family:'DM Mono',monospace;}
+  .popup-stato-bar{height:3px;width:100%;margin-top:12px;border-radius:2px;}
+  /* Body */
+  .popup-body{padding:12px 16px 14px;}
+  .popup-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;margin-bottom:12px;}
+  .popup-field{display:flex;flex-direction:column;gap:2px;}
+  .popup-field.full{grid-column:1/-1;}
+  .popup-field-label{font-size:9px;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);font-weight:500;}
+  .popup-field-val{font-size:12px;font-weight:600;color:var(--text);font-family:'DM Mono',monospace;}
+  /* Stato badge */
+  .popup-stato{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;padding:4px 10px;border-radius:20px;font-family:'DM Sans',sans-serif;}
+  .popup-stato-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+  /* Lavorabile */
+  .popup-lav{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;}
+  .popup-lav.ok{background:#e8f5ee;color:#2e7d52;border:1px solid #2e7d5233;}
+  .popup-lav.no{background:#fdecea;color:#c0392b;border:1px solid #c0392b33;}
+  /* Section */
+  .popup-section{border-top:1px solid var(--border);padding-top:10px;margin-top:2px;}
+  .popup-section-title{font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);font-weight:500;margin-bottom:8px;}
+  .popup-detail-row{display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:5px;}
+  .popup-detail-row .dl{color:var(--muted);}
+  .popup-detail-row .dv{font-family:'DM Mono',monospace;font-size:11px;font-weight:600;}
+  .popup-pratica{display:inline-block;font-family:'DM Mono',monospace;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:3px 8px;margin:2px 3px 2px 0;}
+  .popup-tag{display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:600;padding:3px 9px;border-radius:20px;margin-right:4px;}
+  .popup-tag.ok{background:#e8f5ee;color:#2e7d52;border:1px solid #2e7d5233;}
+  .popup-tag.warn{background:#fef9ec;color:#a07820;border:1px solid #a0782033;}
+  .popup-tag.err{background:#fdecea;color:#c0392b;border:1px solid #c0392b33;}
   /* Loading */
   #loadingOverlay{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:2000;}
   .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;}
@@ -656,54 +676,83 @@ function makePopupHtml(p) {
     'COORDINAMENTO':'Coordinamento',
     'PROTOCOLLATO INTEGRAZIONE':'Protocollato Integrazione',
     'NECESSARIA INTEGRAZIONE':'Necessaria Integrazione',
+    'IN REDAZIONE INTEGRAZIONE':'In Redazione Integrazione',
+    'IN ATTESA':'In Attesa',
+    'IN REDAZIONE':'In Redazione',
+    'INVIATO':'Inviato',
+    'PROTOCOLLATO':'Protocollato',
+    'OTTENUTO':'Ottenuto',
   }[stato] || stato;
 
-  // Pratiche
   const pratiche = p.PRATICA ? p.PRATICA.split('|').map(s=>s.trim()).filter(Boolean) : [];
   const praticheHtml = pratiche.length
-    ? pratiche.map(pr=>`<span class="popup-pratica">${pr}</span>`).join('')
-    : '<span style="color:var(--muted);font-size:10px">—</span>';
+    ? pratiche.map(pr=>`<span class="popup-pratica">${pr}</span>`).join('') : '';
 
-  // Lavorabile badge
   const lav = p.LAVORABILE;
   const lavHtml = lav === 'SI'
-    ? '<span class="popup-tag ok">✓ Lavorabile</span>'
-    : lav === 'NO' ? '<span class="popup-tag err">✗ Non lavorabile</span>' : '';
+    ? '<span class="popup-lav ok">✓ Lavorabile</span>'
+    : lav === 'NO' ? '<span class="popup-lav no">✕ Non lavorabile</span>' : '';
 
-  // Motivo non lavorabile
   const motivoHtml = (lav === 'NO' && p.MOTIVO_NO && p.MOTIVO_NO !== 'OK')
-    ? `<div class="popup-row"><span class="label">Motivo</span><span class="val" style="color:#cc3333">${p.MOTIVO_NO}</span></div>`
-    : '';
-
-  // Nulla Osta / Ordinanza
+    ? `<div class="popup-detail-row"><span class="dl">Motivo</span><span class="dv" style="color:#c0392b">${p.MOTIVO_NO}</span></div>` : '';
   const noHtml = p.STATO_NULLAOSTA && p.STATO_NULLAOSTA !== 'NON NECESSARIO'
-    ? `<div class="popup-row"><span class="label">Nulla Osta</span><span class="val" style="color:${getColor(p.STATO_NULLAOSTA)}">${p.STATO_NULLAOSTA}</span></div>` : '';
+    ? `<div class="popup-detail-row"><span class="dl">Nulla Osta</span><span class="dv" style="color:${getColor(p.STATO_NULLAOSTA)}">${p.STATO_NULLAOSTA}</span></div>` : '';
   const ordHtml = p.STATO_ORDINANZA && p.STATO_ORDINANZA !== 'IN ATTESA'
-    ? `<div class="popup-row"><span class="label">Ordinanza</span><span class="val" style="color:${getColor(p.STATO_ORDINANZA)}">${p.STATO_ORDINANZA}</span></div>` : '';
+    ? `<div class="popup-detail-row"><span class="dl">Ordinanza</span><span class="dv" style="color:${getColor(p.STATO_ORDINANZA)}">${p.STATO_ORDINANZA}</span></div>` : '';
+
+  const enti = [p.ENTE, p['ENTE 2']].filter(Boolean).join(', ') || '—';
+  const hasDetail = motivoHtml || noHtml || ordHtml;
 
   return `<div class="popup-inner">
-    <div class="popup-header">
-      <span class="popup-lotto">Lotto ${p.LOTTO||'—'}</span>
-      ${IMPRESE[p.LOTTO]?`<span class="popup-impresa">${IMPRESE[p.LOTTO]}</span>`:''}
-      <span class="popup-tratta">${p.TRATTA_ID||''}</span>
+    <div class="popup-head">
+      <div class="popup-head-top">
+        <span class="popup-lotto">Lotto ${p.LOTTO||'—'}</span>
+        <button class="popup-close-btn" onclick="this.closest('.leaflet-popup').querySelector('.leaflet-popup-close-button').click()">✕</button>
+      </div>
+      <div class="popup-meta">
+        ${IMPRESE[p.LOTTO]?`<span class="popup-impresa">${IMPRESE[p.LOTTO]}</span>`:''}
+        ${p.TRATTA_ID?`<span class="popup-tratta">${p.TRATTA_ID}</span>`:''}
+      </div>
+      <div style="height:3px;width:100%;margin-top:12px;border-radius:2px;background:${color}33;overflow:hidden"><div style="height:100%;width:100%;background:${color};opacity:0.75"></div></div>
     </div>
-    <div class="popup-row"><span class="label">Comune</span><span class="val">${p.COMUNE||'—'}</span></div>
-    <div class="popup-row"><span class="label">Ente</span><span class="val">${[p.ENTE,p['ENTE 2']].filter(Boolean).join(', ')||'—'}</span></div>
-    <div class="popup-row"><span class="label">Tipologia</span><span class="val">${p.TIPOLOGIA||'—'}</span></div>
-    <div class="popup-row"><span class="label">Lunghezza</span><span class="val">${fmtM(p.LUNGHEZZA)}</span></div>
-    <div class="popup-row"><span class="label">Cluster</span><span class="val">${p.CLUSTER||'—'}</span></div>
-    <div style="margin-top:8px">
-      <span class="popup-stato" style="background:${color}22;color:${color};border:1px solid ${color}44">${statoDisplay}</span>
-      ${lavHtml}
+    <div class="popup-body">
+      <div class="popup-grid">
+        <div class="popup-field">
+          <span class="popup-field-label">Comune</span>
+          <span class="popup-field-val">${p.COMUNE||'—'}</span>
+        </div>
+        <div class="popup-field">
+          <span class="popup-field-label">Cluster</span>
+          <span class="popup-field-val">${p.CLUSTER||'—'}</span>
+        </div>
+        <div class="popup-field full">
+          <span class="popup-field-label">Ente</span>
+          <span class="popup-field-val" style="font-size:11px">${enti}</span>
+        </div>
+        <div class="popup-field">
+          <span class="popup-field-label">Tipologia</span>
+          <span class="popup-field-val">${p.TIPOLOGIA||'—'}</span>
+        </div>
+        <div class="popup-field">
+          <span class="popup-field-label">Lunghezza</span>
+          <span class="popup-field-val">${fmtM(p.LUNGHEZZA)}</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:${hasDetail||pratiche.length?'12px':'0'}">
+        <span class="popup-stato" style="background:${color}18;color:${color};border:1.5px solid ${color}44">
+          <span class="popup-stato-dot" style="background:${color}"></span>${statoDisplay}
+        </span>
+        ${lavHtml}
+      </div>
+      ${hasDetail ? `<div class="popup-section">
+        <div class="popup-section-title">Dettaglio stato</div>
+        ${motivoHtml}${noHtml}${ordHtml}
+      </div>` : ''}
+      ${pratiche.length ? `<div class="popup-section">
+        <div class="popup-section-title">Pratiche</div>
+        <div>${praticheHtml}</div>
+      </div>` : ''}
     </div>
-    ${motivoHtml||noHtml||ordHtml ? `<div class="popup-section">
-      <div class="popup-section-title">Dettaglio stato</div>
-      ${motivoHtml}${noHtml}${ordHtml}
-    </div>` : ''}
-    ${pratiche.length ? `<div class="popup-section">
-      <div class="popup-section-title">Pratiche</div>
-      ${praticheHtml}
-    </div>` : ''}
   </div>`;
 }
 
