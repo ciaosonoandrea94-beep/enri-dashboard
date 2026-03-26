@@ -498,19 +498,45 @@ const RIEPILOGO_URL_FALLBACK = 'riepilogo.csv';
 const MASTER_URL = 'Master.csv';
 
 // Cache CSV condivisa tra loadData() e loadCluster() — evita doppio fetch
+// sessionStorage cache: evita re-fetch ad ogni cambio pagina (TTL 5 minuti)
+const _CSV_CACHE_KEY = 'enri_riepilogo_csv';
+const _CSV_CACHE_TS  = 'enri_riepilogo_ts';
+const _CSV_CACHE_TTL = 5 * 60 * 1000; // 5 minuti
+
 let _riepilogoCsvText = null;
 async function fetchRiepilogoCSV(forceFresh = false) {
+  // 1. Usa cache in memoria (stessa sessione, già parsato)
   if (_riepilogoCsvText && !forceFresh) return _riepilogoCsvText;
+
+  // 2. Usa sessionStorage se non è scaduta e non è forzato il refresh
+  if (!forceFresh) {
+    try {
+      const ts = parseInt(sessionStorage.getItem(_CSV_CACHE_TS) || '0', 10);
+      if (Date.now() - ts < _CSV_CACHE_TTL) {
+        const cached = sessionStorage.getItem(_CSV_CACHE_KEY);
+        if (cached) { _riepilogoCsvText = cached; return _riepilogoCsvText; }
+      }
+    } catch(e) { /* sessionStorage non disponibile, ignora */ }
+  }
+
+  // 3. Fetch da GitHub — timeout ridotto a 8s (era 15s)
   const controller = new AbortController();
-  const tid = setTimeout(() => controller.abort(), 15000);
+  const tid = setTimeout(() => controller.abort(), 8000);
   try {
-    let resp = await fetch(RIEPILOGO_URL + '?t=' + Date.now(), { signal: controller.signal });
-    if (!resp.ok) resp = await fetch(RIEPILOGO_URL_FALLBACK + '?t=' + Date.now(), { signal: controller.signal });
+    // Cache-bust solo quando forceFresh=true (loadData); loadCluster usa cache in memoria
+    const qs = forceFresh ? '?t=' + Date.now() : '';
+    let resp = await fetch(RIEPILOGO_URL + qs, { signal: controller.signal });
+    if (!resp.ok) resp = await fetch(RIEPILOGO_URL_FALLBACK + qs, { signal: controller.signal });
     clearTimeout(tid);
     if (!resp.ok) throw new Error(controller.signal.aborted
       ? 'Timeout: file riepilogo non risponde'
       : 'File riepilogo non trovato — carica Riepilogo_progettazione.csv su GitHub (HTTP ' + resp.status + ').');
     _riepilogoCsvText = await resp.text();
+    // Salva in sessionStorage per i prossimi cambi pagina
+    try {
+      sessionStorage.setItem(_CSV_CACHE_KEY, _riepilogoCsvText);
+      sessionStorage.setItem(_CSV_CACHE_TS,  Date.now().toString());
+    } catch(e) { /* quota o privacy mode, ignora */ }
     return _riepilogoCsvText;
   } catch(e) {
     clearTimeout(tid);
@@ -613,7 +639,7 @@ const STORICO_MAX_ENTRIES = 104; // ~2 anni di aggiornamenti settimanali
 
 async function jsonbinLoad() {
   const controller = new AbortController();
-  const tid = setTimeout(() => controller.abort(new DOMException('Timeout connessione a JSONBin', 'TimeoutError')), 15000);
+  const tid = setTimeout(() => controller.abort(new DOMException('Timeout connessione a JSONBin', 'TimeoutError')), 5000);
   try {
     const res = await fetch(`${JSONBIN_BASE}/${JSONBIN_BIN_ID}/latest`, {
       headers: { 'X-Master-Key': JSONBIN_MASTER_KEY },
@@ -643,7 +669,7 @@ async function jsonbinSave(record) {
 
 async function jsonbinGetLastUpdateISO() {
   const controller = new AbortController();
-  const tid = setTimeout(() => controller.abort(new DOMException('Timeout connessione a JSONBin', 'TimeoutError')), 15000);
+  const tid = setTimeout(() => controller.abort(new DOMException('Timeout connessione a JSONBin', 'TimeoutError')), 5000);
   try {
     const res = await fetch(`${JSONBIN_BASE}/${JSONBIN_BIN_ID}/latest`, {
       headers: { 'X-Master-Key': JSONBIN_MASTER_KEY },
@@ -1405,39 +1431,16 @@ async function loadData(saveSnapshot = false) {
       });
     });
 
-    // ── Storico condiviso via JSONBin ──────────────────────────────────────
+    // ── Storico condiviso via JSONBin — NON BLOCCANTE ──────────────────────
+    // Render della dashboard avviene subito con i dati CSV.
+    // La sincronizzazione con JSONBin parte in parallelo e completa in background.
     let storageRecord = { storico: [] };
     let prevSnapshot = null;
     let dataChanged = false;
 
-    try {
-      storageRecord = await jsonbinLoad();
-      if (!storageRecord.storico) storageRecord.storico = [];
-
-      const storico = storageRecord.storico;
-      prevSnapshot = storico.length > 0 ? storico[storico.length - 1] : null;
-
-      const dataHash = JSON.stringify(data.map(r=>`${r.lotto}|${r.stato}|${r.metri}`).sort());
-      const prevHash = prevSnapshot
-        ? JSON.stringify(prevSnapshot.data.map(r=>`${r.lotto}|${r.stato}|${r.metri}`).sort())
-        : null;
-      dataChanged = dataHash !== prevHash;
-
-      if (dataChanged) {
-        // Non salvare snapshot se il totale è 0 (CSV errato o non caricato)
-        const totaleMetri = data.reduce((a, r) => a + (r.metri || 0), 0);
-        if (totaleMetri > 0) {
-          const newEntry = { data: data, ts: new Date().toISOString() };
-          storico.push(newEntry);
-          if (storico.length > STORICO_MAX_ENTRIES) storico.splice(0, storico.length - STORICO_MAX_ENTRIES);
-          storageRecord.storico = storico;
-          storageRecord.last_excel_upload_at = newEntry.ts;
-          jsonbinSave(storageRecord).catch(e => console.warn('Storico save error:', e));
-        }
-      }
-    } catch(e) {
+    // Avvia la chiamata JSONBin senza await — non blocca il rendering
+    const _jsonbinPromise = jsonbinLoad().catch(e => {
       console.warn('Storico JSONBin error:', e);
-      // Mostra avviso non bloccante
       const eb = document.getElementById('errorBox');
       if (eb) {
         eb.style.display = 'block';
@@ -1453,30 +1456,76 @@ async function loadData(saveSnapshot = false) {
         eb.textContent = msg;
         setTimeout(() => { eb.style.display = 'none'; }, 6000);
       }
-    }
+      return null; // segnala fallimento silenzioso
+    });
 
-        const storicoPrev = storageRecord.storico;
-    const prevForModal = storicoPrev.length >= 2 ? storicoPrev[storicoPrev.length - 2] : null;
-    window._prevSnapshotData = prevForModal ? prevForModal.data : null;
-    window._storicoCompleto = storageRecord.storico; // per il pannello storico
-    window._currentData = data; // dati reali attuali, usati per snapshot backdatati
-    // ────────────────────────────────────────────────────────────────────────
+    // Render immediato con solo i dati CSV (storico vuoto per ora)
+    window._currentData = data;
+    window._prevSnapshotData = null;
+    window._storicoCompleto = [];
 
     setLoading(100);
     renderDashboard(data);
-
     document.getElementById('statusBadge').textContent = '● Aggiornato';
     document.getElementById('statusBadge').className = 'badge ok';
-    // Legge la data dall'ultimo snapshot già caricato — nessuna GET aggiuntiva
-    const _lastIso = storageRecord.last_excel_upload_at
-      || (storageRecord.storico?.length > 0 ? storageRecord.storico[storageRecord.storico.length-1]?.ts : null);
-    const _luDate = (_lastIso && !Number.isNaN(new Date(_lastIso).getTime()))
-      ? new Date(_lastIso) : new Date();
-    const _dateStr = _luDate.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
-    const _lu = document.getElementById('lastUpdate');
-    if(_lu) _lu.innerHTML = `<span>📅 ${_dateStr}</span>`;
     document.getElementById('loadingScreen').style.display = 'none';
     setTimeout(()=>setLoading(0),600);
+
+    // Aggiorna il badge lastUpdate con la data di oggi intanto
+    const _lu0 = document.getElementById('lastUpdate');
+    if (_lu0) _lu0.innerHTML = `<span>📅 ${new Date().toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'})}</span>`;
+
+    // Completa la sincronizzazione JSONBin in background
+    _jsonbinPromise.then(async record => {
+      if (!record) return; // JSONBin non disponibile, niente da fare
+      storageRecord = record;
+      if (!storageRecord.storico) storageRecord.storico = [];
+
+      try {
+
+      const storico = storageRecord.storico;
+      prevSnapshot = storico.length > 0 ? storico[storico.length - 1] : null;
+
+      const dataHash = JSON.stringify(data.map(r=>`${r.lotto}|${r.stato}|${r.metri}`).sort());
+      const prevHash = prevSnapshot
+        ? JSON.stringify(prevSnapshot.data.map(r=>`${r.lotto}|${r.stato}|${r.metri}`).sort())
+        : null;
+      dataChanged = dataHash !== prevHash;
+
+      if (dataChanged) {
+        const totaleMetri = data.reduce((a, r) => a + (r.metri || 0), 0);
+        if (totaleMetri > 0) {
+          const newEntry = { data: data, ts: new Date().toISOString() };
+          storico.push(newEntry);
+          if (storico.length > STORICO_MAX_ENTRIES) storico.splice(0, storico.length - STORICO_MAX_ENTRIES);
+          storageRecord.storico = storico;
+          storageRecord.last_excel_upload_at = newEntry.ts;
+          jsonbinSave(storageRecord).catch(e => console.warn('Storico save error:', e));
+        }
+      }
+
+      // Aggiorna stato globale storico e badge lastUpdate (in background, dashboard già visibile)
+      const storicoPrev = storageRecord.storico;
+      const prevForModal = storicoPrev.length >= 2 ? storicoPrev[storicoPrev.length - 2] : null;
+      window._prevSnapshotData = prevForModal ? prevForModal.data : null;
+      window._storicoCompleto = storageRecord.storico;
+      // Aggiorna prevSnapshot delta (badge variazione KPI)
+      window._prevSnapshotData = prevForModal ? prevForModal.data : null;
+
+      // Aggiorna badge data con quella reale dello storico
+      const _lastIso = storageRecord.last_excel_upload_at
+        || (storicoPrev.length > 0 ? storicoPrev[storicoPrev.length-1]?.ts : null);
+      if (_lastIso && !Number.isNaN(new Date(_lastIso).getTime())) {
+        const _lu = document.getElementById('lastUpdate');
+        if (_lu) _lu.innerHTML = `<span>📅 ${new Date(_lastIso).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'})}</span>`;
+      }
+
+      // ────────────────────────────────────────────────────────────────────
+    } catch(e) {
+      console.warn('Storico background error:', e);
+    }
+  }); // fine _jsonbinPromise.then
+
   } catch(e) {
     setLoading(0);
     document.getElementById('statusBadge').textContent = '✕ Errore';
@@ -1629,7 +1678,7 @@ function getMilestonesHtml(lotto) {
 }
 
 function renderDashboard(data) {
-  const lottiMap={}, lottiTotale={};
+  window._lastDashData = data; // necessario per re-render dopo cambio parametri previsione
   data.forEach(d=>{
     if (!lottiMap[d.lotto]){lottiMap[d.lotto]={};lottiTotale[d.lotto]=d.totale;}
     lottiMap[d.lotto][d.stato]=(lottiMap[d.lotto][d.stato]||0)+d.metri;
@@ -2724,9 +2773,24 @@ async function seedDemoData() {
 // ── CARICAMENTO MASTER.CSV ───────────────────────────────────────────────────
 async function loadMaster() {
   try {
-    const resp = await fetch(MASTER_URL + '?t=' + Date.now());
-    if (!resp.ok) return; // Master.csv opzionale
-    const text = await resp.text();
+    // sessionStorage cache per Master.csv (stesso TTL del riepilogo)
+    let text = null;
+    try {
+      const ts = parseInt(sessionStorage.getItem('enri_master_ts') || '0', 10);
+      if (Date.now() - ts < _CSV_CACHE_TTL) {
+        text = sessionStorage.getItem('enri_master_csv') || null;
+      }
+    } catch(e) {}
+
+    if (!text) {
+      const resp = await fetch(MASTER_URL + '?t=' + Date.now());
+      if (!resp.ok) return;
+      text = await resp.text();
+      try {
+        sessionStorage.setItem('enri_master_csv', text);
+        sessionStorage.setItem('enri_master_ts',  Date.now().toString());
+      } catch(e) {}
+    }
     const lines = text.trim().split('\n').map(l => l.replace(/\r/,''));
     const sep = lines[0].includes(';') ? ';' : ',';
 
@@ -3254,11 +3318,16 @@ function updatePrevRilascio() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 window.addEventListener('load', () => {
-  loadData();
-  Promise.all([
-    loadCluster().catch(e => console.warn('loadCluster error:', e)),
-    loadMaster().catch(e => console.warn('loadMaster error:', e))
-  ]).finally(() => setTimeout(updatePrevRilascio, 600));
+  // loadData per prima — riempie _riepilogoCsvText in memoria.
+  // loadCluster parte solo dopo che loadData ha finito il fetch CSV
+  // (usa la cache in memoria, zero fetch aggiuntivi).
+  // loadMaster è completamente indipendente, parte subito in parallelo.
+  loadMaster().catch(e => console.warn('loadMaster error:', e));
+  loadData().then(() => {
+    loadCluster().catch(e => console.warn('loadCluster error:', e));
+  }).catch(() => {
+    loadCluster().catch(e => console.warn('loadCluster error:', e));
+  }).finally(() => setTimeout(updatePrevRilascio, 600));
 });
 window.onerror = function(msg, src, line, col, err) {
   document.getElementById('loadingScreen').style.display = 'none';
