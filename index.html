@@ -475,14 +475,14 @@
   <div class="topbar-right">
     <span class="badge" id="statusBadge">⏳ Caricamento</span>
     <span id="lastUpdate" style="font-size:10px;color:var(--muted);white-space:nowrap;padding:0 4px"><span></span></span>
-    <a href="mappa.html" style="font-size:10px;padding:3px 9px;border-radius:4px;background:var(--surface2);color:var(--text);border:1px solid var(--border);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-weight:500;text-decoration:none;transition:opacity 0.2s" onmouseover="this.style.opacity=0.75" onmouseout="this.style.opacity=1">🗺 Mappa</a>
-    <a href="executive_summary.html" style="font-size:10px;padding:3px 9px;border-radius:4px;background:var(--surface2);color:var(--text);border:1px solid var(--border);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-weight:500;text-decoration:none;transition:opacity 0.2s" onmouseover="this.style.opacity=0.75" onmouseout="this.style.opacity=1">📋 Executive</a>
+    <a href="mappa.html" style="font-size:11px;padding:6px 14px;border-radius:7px;background:var(--surface2);color:var(--text);border:1px solid var(--border);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;text-decoration:none;transition:opacity 0.2s;white-space:nowrap" onmouseover="this.style.opacity=0.75" onmouseout="this.style.opacity=1">🗺 Mappa</a>
+    <a href="executive_summary.html" style="font-size:11px;padding:6px 14px;border-radius:7px;background:var(--surface2);color:var(--text);border:1px solid var(--border);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;text-decoration:none;transition:opacity 0.2s;white-space:nowrap" onmouseover="this.style.opacity=0.75" onmouseout="this.style.opacity=1">📋 Executive</a>
 
-    <button class="btn" style="font-size:10px;padding:3px 10px;background:#2f5496" onclick="stampaLotti()">⬇ PDF Lotti</button>
-    <button class="btn" style="font-size:10px;padding:3px 10px;background:#1a5c3a" onclick="stampaCluster()">⬇ PDF Cluster</button>
-    <button class="btn" style="font-size:10px;padding:3px 10px;background:#5a3a8c" onclick="apriStorico()">📈 Storico</button>
-    <button class="btn" style="font-size:10px;padding:3px 10px;background:#1e2d1e;color:#7ac87a;border:1px solid #2e4d2e" onclick="exportTuttiXlsx()" title="Esporta tutte le pratiche con tutti i dati">📊 Excel Pratiche</button>
-    <button class="btn" style="font-size:10px;padding:3px 10px;background:#1e2535;color:#8ab4d4;border:1px solid #2e4055" onclick="apriParamPrev()" title="Modifica i parametri di calcolo della previsione rilascio">⚙️ Param. Previsioni</button>
+    <button class="btn" style="font-size:11px;padding:6px 14px;background:#2f5496" onclick="stampaLotti()">⬇ PDF Lotti</button>
+    <button class="btn" style="font-size:11px;padding:6px 14px;background:#1a5c3a" onclick="stampaCluster()">⬇ PDF Cluster</button>
+    <button class="btn" style="font-size:11px;padding:6px 14px;background:#5a3a8c" onclick="apriStorico()">📈 Storico</button>
+    <button class="btn" style="font-size:11px;padding:6px 14px;background:#1e6b1e;color:#c8f0c8;border:1px solid #2e8c2e" onclick="exportTuttiXlsx()" title="Esporta tutte le pratiche con tutti i dati">📊 Excel Pratiche</button>
+    <button class="btn" style="font-size:11px;padding:6px 14px;background:#1e2d50;color:#8ab4d4;border:1px solid #2e4a7a" onclick="apriParamPrev()" title="Modifica i parametri di calcolo della previsione rilascio">⚙️ Param. Previsioni</button>
   </div>
 </div>
 
@@ -2187,13 +2187,13 @@ function renderDonut(globalStati, grandTotal) {
   // % avanzamento al centro
   const avanzMetri = grandTotal - inativoMetri;
   const pctAvanz = grandTotal > 0 ? (avanzMetri / grandTotal * 100) : 0;
-  ctx.fillStyle = '#e8eaf0';
+  ctx.fillStyle = '#1a1d27';
   ctx.font = 'bold 18px Fira Code, monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(pctAvanz.toFixed(1) + '%', cx, cy - 8);
   ctx.font = '10px Plus Jakarta Sans, sans-serif';
-  ctx.fillStyle = '#6b7080';
+  ctx.fillStyle = '#4a5070';
   ctx.fillText('avanzato', cx, cy + 10);
 
   // Legenda
