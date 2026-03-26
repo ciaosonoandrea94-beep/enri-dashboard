@@ -247,31 +247,58 @@ async function loadCSVData() {
       }
       res.push(cur.trim()); return res;
     };
+
+    // FIX #1: findCol con fallback multipli — allineato a index.html
     const hdr = splitL(lines[0]);
-    const iC  = hdr.findIndex(h=>h.trim().toUpperCase()==='CLUSTER');
-    const iL  = hdr.findIndex(h=>h.trim().toUpperCase()==='LUNGHEZZA');
-    const iLt = hdr.findIndex(h=>h.trim().toUpperCase()==='LOTTO');
-    const iS  = hdr.findIndex(h=>h.trim().toUpperCase()==='STATO_LEGENDA');
-    if(iC<0||iL<0||iLt<0||iS<0) throw new Error('Colonne non trovate');
+    const findCol = (...names) => {
+      for(const n of names){
+        const i = hdr.findIndex(h => h.trim().toUpperCase() === n.toUpperCase());
+        if(i >= 0) return i;
+      }
+      return -1;
+    };
+    const iC  = findCol('CLUSTER');
+    const iL  = findCol('LUNGHEZZA','LENGTH');
+    const iLt = findCol('LOTTO');
+    // FIX #1: cerca STATO_LEGENDA prima, poi fallback su STATO_AUTORIZZAZIONE — identico a loadData in index.html
+    const iS  = findCol('STATO_LEGENDA','STATO_AUTORIZZAZIONE_WEB','STATO_AUTORIZZAZIONE','STATO');
+
+    // FIX #4: guard meno rigido — blocca solo su colonne realmente indispensabili
+    if(iL<0||iLt<0) throw new Error('Colonne LUNGHEZZA o LOTTO non trovate nel CSV');
 
     const byLot={}, byCluster={};
     for(let i=1;i<lines.length;i++){
-      const c=splitL(lines[i]);
-      if(c.length<=Math.max(iC,iL,iLt,iS)) continue;
-      const lot=c[iLt].trim(), stato=c[iS].trim(), cl=c[iC].trim().replace(/"/g,'');
-      const m=parseFloat(c[iL].trim().replace(',','.'))||0;
-      if(!stato||m<=0) continue;
+      const cols=splitL(lines[i]);
+      const lot=(cols[iLt]||'').trim().replace(/"/g,'');
+      if(!lot) continue;
+
+      // FIX #3: stato sicuro con fallback 'IN ATTESA' se colonna assente o valore vuoto
+      const stato = (iS>=0 ? (cols[iS]||'').trim() : '') || 'IN ATTESA';
+
+      // FIX #2: parsing lunghezza robusto — identico a index.html
+      const lunghRaw = (cols[iL]||'0').trim();
+      let m = 0;
+      if(lunghRaw.includes(',') && !lunghRaw.includes('.')){
+        m = parseFloat(lunghRaw.replace(',','.')) || 0;
+      } else if(lunghRaw.includes(',')){
+        m = parseFloat(lunghRaw.replace(/\./g,'').replace(',','.')) || 0;
+      } else {
+        m = parseFloat(lunghRaw) || 0;
+      }
+      if(m<=0) continue;
+
       if(SUPPLIER_META[lot]){
         if(!byLot[lot])byLot[lot]={};
         byLot[lot][stato]=(byLot[lot][stato]||0)+m;
       }
+      // FIX #4: accumula per cluster solo se la colonna esiste
+      const cl = iC>=0 ? (cols[iC]||'').trim().replace(/"/g,'') : '';
       if(cl){
         if(!byCluster[cl])byCluster[cl]={};
         byCluster[cl][stato]=(byCluster[cl][stato]||0)+m;
       }
     }
 
-    // ── MODIFICATO: aggiunto coordinamento nel GK ──
     const GK={
       wip:          ['IN ATTESA','IN REDAZIONE','IN REDAZIONE INTEGRAZIONE'],
       coordinamento:['COORDINAMENTO'],
@@ -285,7 +312,6 @@ async function loadCSVData() {
     Object.entries(SUPPLIER_META).forEach(([lot,meta])=>{
       const d=byLot[lot]||{};
       const tot=Object.values(d).reduce((s,v)=>s+v,0);
-      // ── MODIFICATO: aggiunto coordinamento nel CSV_DATA build ──
       CSV_DATA[lot]={...meta, tot,
         wip:          GK.wip.reduce((s,st)=>s+(d[st]||0),0),
         coordinamento:GK.coordinamento.reduce((s,st)=>s+(d[st]||0),0),
