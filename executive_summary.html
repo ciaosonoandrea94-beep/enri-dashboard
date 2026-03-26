@@ -163,12 +163,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   <div class="tb-right">
     <span class="badge" id="repDate">—</span>
     <span id="saveBadge" style="font-size:10px;color:var(--green);opacity:0;transition:opacity .4s;padding:3px 8px;background:#3a8c5c22;border:1px solid #3a8c5c55;border-radius:4px">✓ Salvato</span>
+    <button class="help-btn no-print" onclick="openHelp()" title="Guida alla pagina">?</button>
     <button class="btn btn-edit no-print" id="btnEdit" onclick="toggleEdit()">✏ Modifica</button>
     <button class="btn btn-cancel no-print" id="btnCancel" onclick="cancelEdit()">↩ Annulla</button>
-
     <button class="btn btn-print no-print" onclick="window.print()">🖨 Stampa / PDF</button>
     <a href="index.html" class="btn btn-nav no-print">← Dashboard</a>
-    <button class="help-btn no-print" onclick="openHelp()" title="Guida alla pagina">?</button>
     <a href="mappa.html" class="btn btn-nav no-print">🗺 Mappa</a>
   </div>
 </div>
@@ -292,6 +291,11 @@ async function loadCSVData() {
     // FIX #4: guard meno rigido — blocca solo su colonne realmente indispensabili
     if(iL<0||iLt<0) throw new Error('Colonne LUNGHEZZA o LOTTO non trovate nel CSV');
 
+    const iE = findCol('ENTE','ENTE_DESTINATARIO','DESTINATARIO');
+    const iDr = findCol('DR_INVIO','DATA_INVIO','DR','DATA_SPEDIZIONE');
+    const iDum = findCol('DUM','DATA_ULTIMO_MOV','DATA_AGGIORNAMENTO','DATA_MODIFICA');
+
+    PRATICHE_FORECAST = [];
     const byLot={}, byCluster={};
     for(let i=1;i<lines.length;i++){
       const cols=splitL(lines[i]);
@@ -313,7 +317,12 @@ async function loadCSVData() {
       }
       if(m<=0) continue;
 
+      // Salva dati per forecast per-pratica
       if(SUPPLIER_META[lot]){
+        var ente  = iE  >= 0 ? (cols[iE] ||'').trim() : '';
+        var drRaw = iDr >= 0 ? (cols[iDr]||'').trim() : '';
+        if(!drRaw && iDum>=0) drRaw = (cols[iDum]||'').trim();
+        PRATICHE_FORECAST.push({lot:lot, stato:stato, ente:ente, invioRaw:drRaw});
         if(!byLot[lot])byLot[lot]={};
         byLot[lot][stato]=(byLot[lot][stato]||0)+m;
       }
@@ -928,13 +937,6 @@ function buildExecGanttSection(){
     legendHtml += '<span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text)"><span style="width:14px;height:8px;background:'+r.col+';border-radius:2px;display:inline-block"></span>'+r.label+'</span>';
   });
   legendHtml += '</div>';
-  // Riga 3: marcatori timeline
-  legendHtml += '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">';
-  legendHtml += '<span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-right:4px">Timeline</span>';
-  legendHtml += '<span style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text)"><span style="width:2px;height:14px;background:#d44;display:inline-block"></span> Oggi ('+todayStr+')</span>';
-  legendHtml += '<span style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text)"><span style="width:2px;height:14px;background:repeating-linear-gradient(to bottom,#f59e0b 0,#f59e0b 4px,transparent 4px,transparent 7px);display:inline-block"></span> Target di periodo — dove dovremmo essere a oggi secondo il piano</span>';
-  legendHtml += '<span style="display:flex;align-items:center;gap:5px;font-size:9px;color:var(--muted)">Barra sfumata = pianificato · Barra piena = realizzato</span>';
-  legendHtml += '</div>';
   legendHtml += '</div>';
 
   // Supplier table
@@ -1003,6 +1005,41 @@ function buildExecGanttSection(){
 
 
 
+
+// ── PREV_PARAMS (stessi di index.html) ───────────────────────────────────────
+var PREV_PARAMS_EXEC = JSON.parse(localStorage.getItem('ENRI_PREV_PARAMS') || 'null') || {
+  comuneMilano:60, comune:45, provincia:60, anas:90, altri:180, warnDays:7
+};
+
+function giorniPerEnteForecast(ente) {
+  var p = PREV_PARAMS_EXEC;
+  if (!ente) return p.altri;
+  var u = ente.toUpperCase();
+  if (u.indexOf('COMUNE') >= 0 || u.indexOf('MUNICIPALITY') >= 0) {
+    if (u.indexOf('MILANO') >= 0 && u.indexOf('MILANESE') < 0 && u.indexOf('CORSICO') < 0 &&
+        u.indexOf('CINISELLO') < 0 && u.indexOf('SESTO') < 0 && u.indexOf('ROZZANO') < 0)
+      return p.comuneMilano || 60;
+    return p.comune;
+  }
+  if (u.indexOf('PROVINCIA') >= 0 || u.indexOf('PROVINCE') >= 0) return p.provincia;
+  if (u.indexOf('ANAS') >= 0) return p.anas;
+  return p.altri;
+}
+
+function parseDateExec(s) {
+  if (!s) return null;
+  var p = s.trim().split('/');
+  if (p.length === 3) {
+    var yy = parseInt(p[2]); if (yy < 100) yy += 2000;
+    var d = new Date(yy, parseInt(p[1])-1, parseInt(p[0]));
+    return isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+}
+
+// Individual practice rows for forecast (populated by loadCSVData)
+var PRATICHE_FORECAST = []; // [{lot, stato, ente, invioDate}]
+
 // ── PREVISIONE DATA COMPLETAMENTO ────────────────────────────────────────────
 function buildCompletionForecast() {
   const startDate = new Date(FORECAST_START_DATE + 'T00:00:00');
@@ -1063,24 +1100,50 @@ function buildCompletionForecast() {
   var usingVelocity = Object.keys(storVel).length > 0;
 
   // ── Forecast per lotto ─────────────────────────────────────────────────
+  // Ciclo approvazione medio (gg) da PREV_PARAMS_EXEC (stessi di index)
+  var avgApprovalDays = (function(){
+    var p = PREV_PARAMS_EXEC;
+    // Mix tipico progetto: comuni ~50%, provincia 20%, ANAS 15%, altri 15%
+    return Math.round(p.comune*0.5 + p.provincia*0.2 + p.anas*0.15 + p.altri*0.15);
+  })();
+
   function forecastLot(lot) {
     var d = CSV_DATA[lot];
     if (!d || !d.tot) return null;
     var pctA = (d.ok / d.tot) * 100;
     var pctS = ((d.inviato + d.integr + d.ok) / d.tot) * 100;
-    function toDate(pct, task) {
-      var key = lot+'_'+task;
-      var rDay = storVel[key] || (task==='approval' ? pctA/daysElapsed : pctS/daysElapsed);
-      if (!rDay || rDay <= 0) return null;
-      var dLeft = (100 - (task==='approval'?pctA:pctS)) / rDay;
-      return new Date(today.getTime() + dLeft*86400000);
+    var pctPipeline = ((d.inviato + d.integr) / d.tot) * 100; // in attesa approvazione
+
+    // Velocity submission
+    var rSday = storVel[lot+'_submission'] || (pctS > 0 ? pctS/daysElapsed : 0);
+    var dS = null;
+    if (rSday > 0) {
+      var dLeftS = (100 - pctS) / rSday;
+      dS = new Date(today.getTime() + dLeftS*86400000);
     }
-    var dA = toDate(pctA,'approval'), dS = toDate(pctS,'submission');
+
+    // Velocity approval: usa storico se disponibile, altrimenti stima da submission + offset
+    var rAday = storVel[lot+'_approval'] || (pctA > 0 ? pctA/daysElapsed : 0);
+    var dA = null;
+    if (rAday > 0) {
+      // Abbiamo velocity reale
+      var dLeftA = (100 - pctA) / rAday;
+      dA = new Date(today.getTime() + dLeftA*86400000);
+    } else if (dS !== null) {
+      // Stima: fine submission + ciclo medio approvazione
+      dA = new Date(dS.getTime() + avgApprovalDays * 86400000);
+    } else if (pctPipeline > 0) {
+      // Pratiche già inviate: stima a oggi + residuo ciclo medio
+      var avgWaitedDays = Math.round(avgApprovalDays * (1 - pctPipeline/100));
+      dA = new Date(today.getTime() + Math.max(7, avgWaitedDays)*86400000);
+    }
+
     return { lot, pctA, pctS,
-      rateA: (storVel[lot+'_approval']  || pctA/daysElapsed) * 7,
-      rateS: (storVel[lot+'_submission']|| pctS/daysElapsed) * 7,
+      rateA: (rAday) * 7,
+      rateS: (rSday) * 7,
       dA, dS, ragA: rag(dA), ragS: rag(dS),
-      velA: storInfo[lot+'_approval'], velS: storInfo[lot+'_submission']
+      velA: storInfo[lot+'_approval'], velS: storInfo[lot+'_submission'],
+      estApproval: rAday === 0  // true = stima, non velocità reale
     };
   }
 
@@ -1094,7 +1157,6 @@ function buildCompletionForecast() {
     var ok   = ds.reduce(function(s,d){ return s+d.ok; }, 0);
     var subm = ds.reduce(function(s,d){ return s+d.inviato+d.integr+d.ok; }, 0);
     var pctA = ok/tot*100, pctS = subm/tot*100;
-    // velocity pesata per cluster
     function clVel(task) {
       var totalMetri = 0, totalGain = 0;
       clLots.forEach(function(lot){
@@ -1103,14 +1165,18 @@ function buildCompletionForecast() {
         if (storVel[key]) { totalGain += storVel[key]*d.tot; totalMetri += d.tot; }
       });
       if (totalMetri > 0) return totalGain/totalMetri;
-      // fallback cumulativo
       return (task==='approval' ? pctA : pctS) / daysElapsed;
     }
     var rA = clVel('approval'), rS = clVel('submission');
-    var dlA = rA>0 ? (100-pctA)/rA : null;
     var dlS = rS>0 ? (100-pctS)/rS : null;
-    var dA = dlA!=null ? new Date(today.getTime()+dlA*86400000) : null;
     var dS = dlS!=null ? new Date(today.getTime()+dlS*86400000) : null;
+    var dlA = rA>0 ? (100-pctA)/rA : null;
+    var dA = null;
+    if (dlA != null) {
+      dA = new Date(today.getTime()+dlA*86400000);
+    } else if (dS !== null) {
+      dA = new Date(dS.getTime() + avgApprovalDays*86400000);
+    }
     return { clId, pctA, pctS, rateA:rA*7, rateS:rS*7, dA, dS, ragA:rag(dA), ragS:rag(dS) };
   }
 
@@ -1136,7 +1202,7 @@ function buildCompletionForecast() {
     + '<div style="font-size:10px;color:'+headlineCol+';margin-top:3px;opacity:.8">'
     + (overallDaysLeft ? 'fra '+overallDaysLeft+' giorni · ' : '')
     + 'Target interno: 31 ott 2026'
-    + (usingVelocity ? ' · <strong>velocità calcolata su ultimi 30 gg</strong>' : ' · velocità media dall\'avvio')
+    + (usingVelocity ? ' · <strong>velocità calcolata su ultimi 30 gg</strong>' : ' · stima da tasso invio + ~'+avgApprovalDays+'gg ciclo approvazione medio')
     + '</div></div>'
     + '<div style="font-size:32px">📅</div>'
     + '</div>';
@@ -1279,11 +1345,7 @@ function render(){
       </div>
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
         ${pill}
-        <div style="font-size:10px;color:var(--muted);display:flex;gap:7px;align-items:center">
-          <span class="rag rg">●</span>On track
-          <span class="rag ry" style="margin-left:4px">●</span>At risk
-          <span class="rag rr" style="margin-left:4px">●</span>Overdue
-        </div>
+
       </div>
     </div>
   </div></div>`;
@@ -1348,7 +1410,13 @@ function render(){
 
   h+=`<div class="two-col">`;
 
-  h+=`<div class="card"><div class="ch"><span class="ct">Key Milestones</span></div>
+  h+=`<div class="card"><div class="ch"><span class="ct">Key Milestones</span>
+    <span style="display:flex;align-items:center;gap:5px;margin-left:auto">
+      <span class="rag rg">●</span><span style="font-size:10px;color:var(--text)">On track</span>
+      <span class="rag ry">●</span><span style="font-size:10px;color:var(--text)">At risk</span>
+      <span class="rag rr">●</span><span style="font-size:10px;color:var(--text)">Overdue</span>
+    </span>
+  </div>
   <div style="overflow-x:auto"><table class="dt"><thead><tr>
     <th style="min-width:200px">Milestone</th><th>Baseline</th><th>Forecast</th><th>RAG</th>
   </tr></thead><tbody id="kmBody">`;
