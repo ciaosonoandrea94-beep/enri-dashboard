@@ -1142,7 +1142,11 @@ async function saveToStorage(){
       headers:{ 'X-Master-Key': JSONBIN_MASTER_KEY }
     });
     const existing = getResp.ok ? (await getResp.json()).record : {};
-    existing[EXEC_BIN_KEY] = document.getElementById('main').innerHTML;
+    // Clona #main escludendo #ganttCard (rigenerato sempre da CSV fresco al caricamento)
+    const mainClone = document.getElementById('main').cloneNode(true);
+    const gcToRemove = mainClone.querySelector('#ganttCard');
+    if (gcToRemove) gcToRemove.remove();
+    existing[EXEC_BIN_KEY] = mainClone.innerHTML;
     await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
       method:'PUT',
       headers:{ 'Content-Type':'application/json', 'X-Master-Key': JSONBIN_MASTER_KEY },
@@ -1165,6 +1169,8 @@ async function loadFromStorage(){
     if(data && data[EXEC_BIN_KEY]){
       document.getElementById('main').innerHTML = data[EXEC_BIN_KEY];
       document.querySelectorAll('[contenteditable]').forEach(el=>el.contentEditable='false');
+      // Rigenera sempre Gantt e Permit con dati CSV freschi, ignorando i valori serializzati
+      updateLiveData();
       return true;
     }
   } catch(e){ console.warn('Caricamento JSONBin fallito:', e); }
@@ -1364,10 +1370,8 @@ async function init(){
   const restored = await loadFromStorage();
   if(!restored){
     render();
-  } else {
-    updateLiveData();
-    ensureGanttCardInDom();
   }
+  // se restored=true, loadFromStorage chiama già updateLiveData() + ensureGanttCardInDom()
   document.querySelectorAll('[contenteditable]').forEach(el=>el.contentEditable='false');
 }
 init();
