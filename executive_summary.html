@@ -124,7 +124,32 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   .mc-note{ font-size:7.5pt!important; }
   .pb-w{ min-width:60px; }
   .note-box{ background:#fffbf0!important; border:1px solid #e8d8a0!important; padding:8px 12px!important; }
-}</style>
+}
+  /* ── HELP MODAL ── */
+  #helpOverlay {
+    position:fixed;inset:0;background:#0007;display:flex;align-items:center;
+    justify-content:center;z-index:2000;opacity:0;pointer-events:none;transition:opacity .2s;
+  }
+  #helpOverlay.open { opacity:1; pointer-events:all; }
+  #helpOverlay .help-modal {
+    background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    width:640px;max-width:94vw;max-height:82vh;overflow-y:auto;padding:28px 32px;
+    box-shadow:0 20px 60px #0005;
+  }
+  #helpOverlay h3 { font-size:16px;font-weight:700;color:var(--text);margin:0 0 4px; }
+  #helpOverlay .help-section { margin-top:18px; }
+  #helpOverlay .help-section h4 { font-size:11px;font-weight:700;text-transform:uppercase;
+    letter-spacing:.08em;color:var(--accent2);margin:0 0 8px; }
+  #helpOverlay .help-section p { font-size:12px;color:var(--muted);line-height:1.6;margin:0; }
+  .help-btn {
+    background:var(--surface2);border:1px solid var(--border);border-radius:7px;
+    color:var(--muted);font-size:13px;font-weight:700;width:28px;height:28px;
+    cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
+    transition:all .15s;
+  }
+  .help-btn:hover { background:var(--accent2);color:#fff;border-color:var(--accent2); }
+
+</style>
 </head>
 <body>
 
@@ -143,6 +168,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 
     <button class="btn btn-print no-print" onclick="window.print()">🖨 Stampa / PDF</button>
     <a href="index.html" class="btn btn-nav no-print">← Dashboard</a>
+    <button class="help-btn no-print" onclick="openHelp()" title="Guida alla pagina">?</button>
     <a href="mappa.html" class="btn btn-nav no-print">🗺 Mappa</a>
   </div>
 </div>
@@ -976,6 +1002,229 @@ function buildExecGanttSection(){
 
 
 
+
+// ── PREVISIONE DATA COMPLETAMENTO ────────────────────────────────────────────
+function buildCompletionForecast() {
+  const startDate = new Date(FORECAST_START_DATE + 'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const daysElapsed = Math.max(1, Math.floor((today - startDate) / 86400000));
+  const fmtDate = d => d ? d.toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+  const lots = ['1A','1B','2A','2B'];
+  const clusterMap = {'1':['1A','1B'], '2':['2A','2B']};
+  const TARGET_DATE = new Date('2026-10-31T00:00:00');
+  const WARN_DATE   = new Date('2026-12-31T00:00:00');
+  const ragColors = { green:'#15803d', yellow:'#b07d10', red:'#dc2626', grey:'#6b7080' };
+  const ragBg     = { green:'#dcfce7', yellow:'#fef3c7', red:'#fef2f2', grey:'#f1f5f9' };
+  const ragLabel  = { green:'In target', yellow:'A rischio', red:'Fuori target', grey:'—' };
+  function rag(dt) {
+    if (!dt) return 'grey';
+    if (dt <= TARGET_DATE) return 'green';
+    if (dt <= WARN_DATE)   return 'yellow';
+    return 'red';
+  }
+
+  // ── Velocity da storico (ultimi 30 giorni) se disponibile ──────────────
+  var storVel = {}; // { '1A_approval': %/day, ... }
+  var storInfo = {}; // { '1A_approval': { days, delta } }
+  var storicoArr = window._storicoCompleto || [];
+  if (storicoArr.length >= 2) {
+    var cutoff = new Date(today.getTime() - 30*86400000);
+    var recent = storicoArr.filter(function(e){ return new Date(e.ts) >= cutoff; });
+    if (recent.length < 2) recent = storicoArr.slice(-2); // fallback ultimi 2
+    var eOld = recent[0], eNew = recent[recent.length-1];
+    var velDays = Math.max(1, (new Date(eNew.ts) - new Date(eOld.ts)) / 86400000);
+    lots.forEach(function(lot){
+      ['submission','approval'].forEach(function(task){
+        function extractPct(entry, lot, task){
+          if (!entry || !entry.data) return null;
+          var rows = entry.data.filter(function(r){ return r.lotto === lot; });
+          var tot = rows.reduce(function(s,r){ return s+(r.metri||0); }, 0);
+          if (!tot) return null;
+          if (task === 'approval'){
+            var ok = rows.filter(function(r){ return r.stato==='OTTENUTO'; })
+                         .reduce(function(s,r){ return s+r.metri; }, 0);
+            return ok/tot*100;
+          }
+          var done = rows.filter(function(r){
+            return ['INVIATO','INTEGRAZIONE','IN INTEGRAZIONE','OTTENUTO'].indexOf(r.stato)>=0;
+          }).reduce(function(s,r){ return s+r.metri; }, 0);
+          return done/tot*100;
+        }
+        var p0 = extractPct(eOld, lot, task);
+        var p1 = extractPct(eNew, lot, task);
+        var key = lot+'_'+task;
+        if (p0 !== null && p1 !== null && p1 > p0) {
+          storVel[key]  = (p1 - p0) / velDays;
+          storInfo[key] = { days: Math.round(velDays), delta: (p1-p0).toFixed(1) };
+        }
+      });
+    });
+  }
+  var usingVelocity = Object.keys(storVel).length > 0;
+
+  // ── Forecast per lotto ─────────────────────────────────────────────────
+  function forecastLot(lot) {
+    var d = CSV_DATA[lot];
+    if (!d || !d.tot) return null;
+    var pctA = (d.ok / d.tot) * 100;
+    var pctS = ((d.inviato + d.integr + d.ok) / d.tot) * 100;
+    function toDate(pct, task) {
+      var key = lot+'_'+task;
+      var rDay = storVel[key] || (task==='approval' ? pctA/daysElapsed : pctS/daysElapsed);
+      if (!rDay || rDay <= 0) return null;
+      var dLeft = (100 - (task==='approval'?pctA:pctS)) / rDay;
+      return new Date(today.getTime() + dLeft*86400000);
+    }
+    var dA = toDate(pctA,'approval'), dS = toDate(pctS,'submission');
+    return { lot, pctA, pctS,
+      rateA: (storVel[lot+'_approval']  || pctA/daysElapsed) * 7,
+      rateS: (storVel[lot+'_submission']|| pctS/daysElapsed) * 7,
+      dA, dS, ragA: rag(dA), ragS: rag(dS),
+      velA: storInfo[lot+'_approval'], velS: storInfo[lot+'_submission']
+    };
+  }
+
+  // ── Forecast aggregato per cluster ────────────────────────────────────
+  function clusterForecast(clId) {
+    var clLots = clusterMap[clId];
+    var ds = clLots.map(function(l){ return CSV_DATA[l]; }).filter(Boolean);
+    if (!ds.length) return null;
+    var tot  = ds.reduce(function(s,d){ return s+d.tot; }, 0);
+    if (!tot) return null;
+    var ok   = ds.reduce(function(s,d){ return s+d.ok; }, 0);
+    var subm = ds.reduce(function(s,d){ return s+d.inviato+d.integr+d.ok; }, 0);
+    var pctA = ok/tot*100, pctS = subm/tot*100;
+    // velocity pesata per cluster
+    function clVel(task) {
+      var totalMetri = 0, totalGain = 0;
+      clLots.forEach(function(lot){
+        var d = CSV_DATA[lot]; if(!d||!d.tot) return;
+        var key = lot+'_'+task;
+        if (storVel[key]) { totalGain += storVel[key]*d.tot; totalMetri += d.tot; }
+      });
+      if (totalMetri > 0) return totalGain/totalMetri;
+      // fallback cumulativo
+      return (task==='approval' ? pctA : pctS) / daysElapsed;
+    }
+    var rA = clVel('approval'), rS = clVel('submission');
+    var dlA = rA>0 ? (100-pctA)/rA : null;
+    var dlS = rS>0 ? (100-pctS)/rS : null;
+    var dA = dlA!=null ? new Date(today.getTime()+dlA*86400000) : null;
+    var dS = dlS!=null ? new Date(today.getTime()+dlS*86400000) : null;
+    return { clId, pctA, pctS, rateA:rA*7, rateS:rS*7, dA, dS, ragA:rag(dA), ragS:rag(dS) };
+  }
+
+  var results = lots.map(forecastLot).filter(Boolean);
+  var cl1 = clusterForecast('1'), cl2 = clusterForecast('2');
+
+  // ── Headline: data completamento overall (approval 100%) ──────────────
+  var allApprovalDates = results.map(function(r){ return r.dA; }).filter(Boolean);
+  var overallDate = allApprovalDates.length
+    ? new Date(Math.max.apply(null, allApprovalDates))
+    : null;
+  var overallRag = rag(overallDate);
+  var overallDaysLeft = overallDate ? Math.ceil((overallDate - today)/86400000) : null;
+
+  var headlineBg   = ragBg[overallRag];
+  var headlineCol  = ragColors[overallRag];
+  var headlineIcon = {green:'✅', yellow:'⚠️', red:'🔴', grey:'—'}[overallRag];
+
+  var headlineHtml = '<div style="display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;padding:14px 18px;background:'+headlineBg+';border:1.5px solid '+headlineCol+'44;border-radius:8px;margin-bottom:16px">'
+    + '<div>'
+    + '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:'+headlineCol+';margin-bottom:4px">'+headlineIcon+' Stima completamento autorizzazioni</div>'
+    + '<div style="font-size:26px;font-weight:800;color:'+headlineCol+';font-variant-numeric:tabular-nums">'+(overallDate ? fmtDate(overallDate) : 'Dati insufficienti')+'</div>'
+    + '<div style="font-size:10px;color:'+headlineCol+';margin-top:3px;opacity:.8">'
+    + (overallDaysLeft ? 'fra '+overallDaysLeft+' giorni · ' : '')
+    + 'Target interno: 31 ott 2026'
+    + (usingVelocity ? ' · <strong>velocità calcolata su ultimi 30 gg</strong>' : ' · velocità media dall\'avvio')
+    + '</div></div>'
+    + '<div style="font-size:32px">📅</div>'
+    + '</div>';
+
+  // ── Row per lotto ──────────────────────────────────────────────────────
+  function lotRow(r) {
+    var ragA = r.ragA, ragS = r.ragS;
+    var velHintA = r.velA ? '<div style="font-size:8px;color:#6b7080">∆'+r.velA.delta+'% in '+r.velA.days+'gg</div>' : '';
+    var velHintS = r.velS ? '<div style="font-size:8px;color:#6b7080">∆'+r.velS.delta+'% in '+r.velS.days+'gg</div>' : '';
+    return '<tr style="border-bottom:1px solid var(--border)">'
+      + '<td style="padding:8px 10px;font-size:11px;font-weight:700;color:var(--accent2)">'+r.lot+'</td>'
+      + '<td style="padding:8px 10px;text-align:center">'
+      +   '<div style="font-size:14px;font-weight:800;color:'+ragColors[ragS]+'">'+r.pctS.toFixed(0)+'%</div>'
+      +   '<div style="font-size:8px;color:var(--muted)">'+r.rateS.toFixed(1)+'%/sett</div>'
+      +   velHintS
+      + '</td>'
+      + '<td style="padding:8px 10px;text-align:center">'
+      +   '<div style="font-size:10px;font-weight:600;color:'+ragColors[ragS]+'">'+fmtDate(r.dS)+'</div>'
+      +   '<span style="font-size:8px;font-weight:600;color:'+ragColors[ragS]+';background:'+ragBg[ragS]+';border-radius:3px;padding:1px 5px">'+ragLabel[ragS]+'</span>'
+      + '</td>'
+      + '<td style="padding:8px 10px;text-align:center">'
+      +   '<div style="font-size:14px;font-weight:800;color:'+ragColors[ragA]+'">'+r.pctA.toFixed(0)+'%</div>'
+      +   '<div style="font-size:8px;color:var(--muted)">'+r.rateA.toFixed(1)+'%/sett</div>'
+      +   velHintA
+      + '</td>'
+      + '<td style="padding:8px 10px;text-align:center">'
+      +   '<div style="font-size:10px;font-weight:600;color:'+ragColors[ragA]+'">'+fmtDate(r.dA)+'</div>'
+      +   '<span style="font-size:8px;font-weight:600;color:'+ragColors[ragA]+';background:'+ragBg[ragA]+';border-radius:3px;padding:1px 5px">'+ragLabel[ragA]+'</span>'
+      + '</td>'
+      + '</tr>';
+  }
+
+  function clRow(cl, label) {
+    if (!cl) return '';
+    return '<tr style="background:var(--surface2);font-weight:700;border-top:2px solid var(--border)">'
+      + '<td style="padding:8px 10px;font-size:11px;font-weight:700;color:var(--text)" colspan="1">'+label+'</td>'
+      + '<td style="padding:8px 10px;text-align:center">'
+      +   '<div style="font-size:14px;font-weight:800;color:'+ragColors[cl.ragS]+'">'+cl.pctS.toFixed(0)+'%</div>'
+      +   '<div style="font-size:8px;color:var(--muted)">'+cl.rateS.toFixed(1)+'%/sett</div>'
+      + '</td>'
+      + '<td style="padding:8px 10px;text-align:center">'
+      +   '<div style="font-size:10px;font-weight:600;color:'+ragColors[cl.ragS]+'">'+fmtDate(cl.dS)+'</div>'
+      +   '<span style="font-size:8px;font-weight:600;color:'+ragColors[cl.ragS]+';background:'+ragBg[cl.ragS]+';border-radius:3px;padding:1px 5px">'+ragLabel[cl.ragS]+'</span>'
+      + '</td>'
+      + '<td style="padding:8px 10px;text-align:center">'
+      +   '<div style="font-size:14px;font-weight:800;color:'+ragColors[cl.ragA]+'">'+cl.pctA.toFixed(0)+'%</div>'
+      +   '<div style="font-size:8px;color:var(--muted)">'+cl.rateA.toFixed(1)+'%/sett</div>'
+      + '</td>'
+      + '<td style="padding:8px 10px;text-align:center">'
+      +   '<div style="font-size:10px;font-weight:600;color:'+ragColors[cl.ragA]+'">'+fmtDate(cl.dA)+'</div>'
+      +   '<span style="font-size:8px;font-weight:600;color:'+ragColors[cl.ragA]+';background:'+ragBg[cl.ragA]+';border-radius:3px;padding:1px 5px">'+ragLabel[cl.ragA]+'</span>'
+      + '</td>'
+      + '</tr>';
+  }
+
+  var noteStr = '<div style="font-size:9px;color:var(--muted);margin-top:10px;padding:8px 12px;background:var(--surface2);border-radius:5px;border-left:3px solid var(--border)">'
+    + '<strong>Metodo:</strong> '
+    + (usingVelocity
+        ? 'velocità calcolata sui dati storici degli <strong>ultimi 30 giorni</strong> (più rappresentativa del ritmo attuale).'
+        : 'proiezione lineare sulla velocità media dall\'avvio progetto (' + fmtDate(startDate) + ', ' + daysElapsed + ' giorni). Uploada più snapshot per abilitare la velocità a 30 gg.')
+    + ' Il target interno per il completamento delle autorizzazioni è il <strong>31/10/2026</strong>.'
+    + '</div>';
+
+  return '<div class="card" id="forecastCard">'
+    + '<div class="ch"><span class="ct">📅 Previsione Completamento Autorizzazioni</span>'
+    + '<span style="font-size:10px;color:var(--muted);margin-left:8px">'
+    + (usingVelocity ? 'Basata su velocità ultimi 30 gg' : 'Proiezione lineare da avvio')
+    + '</span></div>'
+    + '<div class="cb">'
+    + headlineHtml
+    + '<table style="width:100%;border-collapse:collapse">'
+    + '<thead><tr style="background:var(--blue-header)">'
+    + '<th style="padding:6px 10px;font-size:9px;font-weight:600;color:#b8c8e8;text-align:left">Lotto</th>'
+    + '<th style="padding:6px 10px;font-size:9px;font-weight:600;color:#b8c8e8;text-align:center">Submission %</th>'
+    + '<th style="padding:6px 10px;font-size:9px;font-weight:600;color:#b8c8e8;text-align:center">Fine prevista Submission</th>'
+    + '<th style="padding:6px 10px;font-size:9px;font-weight:600;color:#b8c8e8;text-align:center">Approval %</th>'
+    + '<th style="padding:6px 10px;font-size:9px;font-weight:600;color:#b8c8e8;text-align:center">Fine prevista Approval</th>'
+    + '</tr></thead>'
+    + '<tbody>'
+    + clRow(cl1, '⚡ Cluster 1')
+    + results.filter(function(r){ return ['1A','1B'].indexOf(r.lot)>=0; }).map(lotRow).join('')
+    + clRow(cl2, '⚡ Cluster 2')
+    + results.filter(function(r){ return ['2A','2B'].indexOf(r.lot)>=0; }).map(lotRow).join('')
+    + '</tbody></table>'
+    + noteStr
+    + '</div></div>';
+}
+
 function ensureGanttCardInDom() {
   const main = document.getElementById('main');
   if (!main) return;
@@ -992,6 +1241,20 @@ function ensureGanttCardInDom() {
     old.replaceWith(fresh);
   } else {
     permit.insertAdjacentElement('afterend', fresh);
+  }
+
+  // Aggiorna/inserisce la sezione Previsione Data Completamento
+  const forecastTpl = document.createElement('template');
+  forecastTpl.innerHTML = buildCompletionForecast().trim();
+  const freshFc = forecastTpl.content.firstElementChild;
+  if (freshFc) {
+    const oldFc = document.getElementById('forecastCard');
+    const ganttNow = document.getElementById('ganttCard');
+    if (oldFc) {
+      oldFc.replaceWith(freshFc);
+    } else if (ganttNow) {
+      ganttNow.insertAdjacentElement('afterend', freshFc);
+    }
   }
 }
 
@@ -1201,6 +1464,8 @@ async function loadFromStorage(){
     if(!resp.ok) return false;
     const data = (await resp.json()).record;
     if(data && data[EXEC_BIN_KEY]){
+      // Salva storico per velocity-based forecast
+      window._storicoCompleto = Array.isArray(data.storico) ? data.storico : [];
       document.getElementById('main').innerHTML = data[EXEC_BIN_KEY];
       document.querySelectorAll('[contenteditable]').forEach(el=>el.contentEditable='false');
       // Rigenera sempre Gantt e Permit con dati CSV freschi, ignorando i valori serializzati
@@ -1409,6 +1674,59 @@ async function init(){
   document.querySelectorAll('[contenteditable]').forEach(el=>el.contentEditable='false');
 }
 init();
+
+
+function openHelp() {
+  document.getElementById('helpOverlay').classList.add('open');
+}
+
 </script>
+
+<!-- Help Modal -->
+<div id="helpOverlay" onclick="if(event.target===this)document.getElementById('helpOverlay').classList.remove('open')">
+  <div class="help-modal">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <h3>📋 Guida — Executive Summary</h3>
+      <span onclick="document.getElementById('helpOverlay').classList.remove('open')"
+        style="cursor:pointer;color:var(--muted);font-size:22px;line-height:1">×</span>
+    </div>
+    <div style="font-size:11px;color:var(--muted)">Come leggere questa pagina</div>
+
+    <div class="help-section">
+      <h4>🟢 Project Status &amp; RAG</h4>
+      <p>La card in alto mostra lo stato complessivo del progetto (On Track / At Risk / Delayed) e i KPI principali di avanzamento per cluster. I pallini colorati (RAG: verde/giallo/rosso) indicano lo stato di ogni attività. In modalità modifica puoi aggiornare manualmente i valori.</p>
+    </div>
+
+    <div class="help-section">
+      <h4>📊 Permit Submission Progress</h4>
+      <p>Barre di avanzamento per Cluster 1 e Cluster 2: mostrano quante pratiche (in metri di fibra) sono state inviate agli enti o già autorizzate, suddivise per fornitore (Valtellina, Soleto, Sielte, Telebit). I dati vengono letti in tempo reale dal CSV di progetto.</p>
+    </div>
+
+    <div class="help-section">
+      <h4>📅 Gantt di Progetto</h4>
+      <p>Il Gantt mostra la pianificazione temporale delle attività chiave. La barra sfumata rappresenta il periodo pianificato; quella piena l'avanzamento reale. La linea rossa verticale è <em>oggi</em>; la linea ambra tratteggiata è il target di periodo (dove dovremmo essere a oggi secondo la progressione lineare del piano). La colonna <strong>Previsto</strong> mostra la % attesa e un badge che indica se siamo in anticipo (▲), in linea (●) o in ritardo (▼) rispetto al target.</p>
+    </div>
+
+    <div class="help-section">
+      <h4>📅 Previsione Data Completamento</h4>
+      <p>Calcola, per ogni lotto e cluster, la data stimata in cui raggiungeremo il 100% di Submission e di Approval, proiettando linearmente il tasso di avanzamento attuale dall'inizio progetto. Il semaforo è rispetto al target interno del 31/10/2026: verde = in target, giallo = a rischio (entro fine anno), rosso = fuori target.</p>
+    </div>
+
+    <div class="help-section">
+      <h4>🗺 Key Milestones &amp; Timeline</h4>
+      <p>Tabella delle milestone principali con data prevista, data di forecast e stato RAG. In modalità modifica puoi aggiungere, modificare ed eliminare le milestone.</p>
+    </div>
+
+    <div class="help-section">
+      <h4>✏ Modalità Modifica</h4>
+      <p>Attiva il pulsante <strong>Modifica</strong> per modificare i valori RAG, testi, percentuali e date. I dati vengono salvati automaticamente su JSONBin.io e sono condivisi con tutti gli utenti della dashboard. Usa <strong>Salva</strong> per confermare o <strong>Annulla</strong> per ripristinare.</p>
+    </div>
+
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);font-size:10px;color:var(--muted)">
+      💡 I dati di avanzamento (Gantt, Forecast, Permit Progress) vengono aggiornati automaticamente ogni volta che l'Excel delle pratiche viene caricato nella Dashboard principale.
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
