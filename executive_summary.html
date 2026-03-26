@@ -822,7 +822,7 @@ function buildExecGanttSection(){
     ganttHtml += '<div style="width:'+fillW+'%;height:100%;background:'+color+';border-radius:2px 0 0 2px;opacity:.9"></div>';
     // Linea previsione (triangolino bianco)
     if(fcastW !== null && !t.done){
-      ganttHtml += '<div style="position:absolute;top:0;bottom:0;left:'+fcastW+'%;width:2px;background:#fff;opacity:.85;z-index:3;pointer-events:none" title="Previsione: '+parseFloat(fcastW).toFixed(0)+'%"></div>';
+      ganttHtml += '<div style="position:absolute;top:0;bottom:0;left:'+fcastW+'%;width:2px;background:repeating-linear-gradient(to bottom,#f59e0b 0,#f59e0b 4px,transparent 4px,transparent 7px);z-index:3;pointer-events:none" title="Atteso a oggi: '+parseFloat(fcastW).toFixed(0)+'%"><div style="position:absolute;top:-5px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid #f59e0b"></div></div>';
     }
     if(prog>=5||t.done){
       ganttHtml += '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;text-shadow:0 1px 2px #0006;pointer-events:none">'+pctLabel+'</div>';
@@ -842,14 +842,14 @@ function buildExecGanttSection(){
       if(fcast !== null){
         var fcParsed = parseFloat(fcastW);
         var fcColor = fcParsed>=80?'var(--green)':fcParsed>=40?'#b07d10':'#cc3333';
-        ganttHtml += '<span style="font-size:8px;color:'+fcColor+';font-family:\'DM Mono\',monospace" title="% previsione">▶'+fcParsed.toFixed(0)+'%</span>';
+        ganttHtml += '<span style="font-size:8px;font-weight:600;color:#d97706;background:#fef3c7;border:1px solid #f59e0b55;border-radius:3px;padding:1px 5px" title="% atteso a oggi">prev. '+fcParsed.toFixed(0)+'%</span>';
       }
     } else {
       ganttHtml += '<span style="font-size:9px;font-weight:700;font-family:\'DM Mono\',monospace;color:'+pctColor+'">'+prog.toFixed(0)+'%</span>';
       if(fcast !== null){
         var fcParsed2 = parseFloat(fcastW);
         var fcColor2 = fcParsed2>=80?'var(--green)':fcParsed2>=40?'#b07d10':'#cc3333';
-        ganttHtml += '<span style="font-size:7px;color:'+fcColor2+';font-family:\'DM Mono\',monospace" title="% attesa a oggi">▶'+fcParsed2.toFixed(0)+'%</span>';
+        ganttHtml += '<span style="font-size:8px;font-weight:600;color:#d97706;background:#fef3c7;border:1px solid #f59e0b55;border-radius:3px;padding:1px 5px" title="% atteso a oggi">prev. '+fcParsed2.toFixed(0)+'%</span>';
       }
     }
     ganttHtml += '</div>';
@@ -873,7 +873,7 @@ function buildExecGanttSection(){
     legendHtml += '<span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:8px;background:'+r.col+';border-radius:2px;display:inline-block"></span>'+r.label+'</span>';
   });
   legendHtml += '<span style="display:flex;align-items:center;gap:4px"><span style="width:2px;height:12px;background:#d44;display:inline-block"></span> Oggi ('+todayStr+')</span>';
-  legendHtml += '<span style="display:flex;align-items:center;gap:4px"><span style="width:2px;height:12px;background:#fff;border:1px solid #aaa;display:inline-block"></span> Linea bianca = % attesa a oggi (previsione)</span>';
+  legendHtml += '<span style="display:flex;align-items:center;gap:4px"><span style="width:2px;height:12px;background:repeating-linear-gradient(to bottom,#f59e0b 0,#f59e0b 4px,transparent 4px,transparent 7px);display:inline-block"></span><span style="font-size:8px;font-weight:600;color:#d97706;background:#fef3c7;border:1px solid #f59e0b55;border-radius:3px;padding:0 4px">prev. XX%</span> = % attesa a oggi</span>';
   legendHtml += '<span style="margin-left:auto;font-size:9px">Barra chiara = pianificato · Barra piena = effettivo · <strong style="color:#555">▶XX%</strong> = % attesa</span>';
   legendHtml += '</div>';
 
