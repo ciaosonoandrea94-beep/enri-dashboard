@@ -1199,12 +1199,12 @@ function renderCluster(clMap, clTot) {
   clusters.forEach(cl => {
     const tot = clTot[cl];
     const ottenutoPct = tot > 0 ? (clMap[cl]['OTTENUTO'] || 0) / tot * 100 : 0;
-    const pctLabel = ottenutoPct > 0 ? ottenutoPct.toFixed(0) + '%' : '—';
+    const pctLabel = ottenutoPct > 0 ? ottenutoPct.toFixed(0) + '%' : '';
     const gruppi = buildGruppiMap(clMap[cl]);
     const segsHtml = renderBarre(gruppi, tot, tooltip);
     const row = document.createElement('div');
     row.className = 'bar-row';
-    row.innerHTML = `<span class="bar-lotto">${cl}</span><div class="bar-track">${segsHtml}</div><span class="bar-pct">${pctLabel}</span>`;
+    row.innerHTML = `<span class="bar-lotto">${cl}</span><div class="bar-track">${segsHtml}</div><span class="bar-pct">${pctLabel}</span><span style="min-width:72px;text-align:right;font-size:10px;color:var(--muted);font-family:'Fira Code',monospace;flex-shrink:0">${fmt(tot)} m</span>`;
     row.style.cursor = 'pointer';
     row.title = 'Clicca per dettaglio cluster';
     row.addEventListener('click', () => openModalCluster(cl, clMap[cl], clTot[cl]));
@@ -2158,7 +2158,7 @@ function renderDashboard(data) {
     }
     const tot=lottiTotale[lotto];
     const ottenutoPct=tot>0?(lottiMap[lotto]['OTTENUTO']||0)/tot*100:0;
-    const pctLabel = ottenutoPct>0 ? ottenutoPct.toFixed(0)+'%' : '—';
+    const pctLabel = ottenutoPct>0 ? ottenutoPct.toFixed(0)+'%' : '';
     const gruppi = buildGruppiMap(lottiMap[lotto]);
     const segsHtml = renderBarre(gruppi, tot, tooltip);
     const row=document.createElement('div');
@@ -2169,7 +2169,7 @@ function renderDashboard(data) {
     const lottoHtml = impresa
       ? `<div class="bar-lotto-wrap" title="${impresa}"><span class="bar-lotto-num">${lotto}</span><span class="bar-lotto-comuni">${impresa}</span></div>`
       : `<div class="bar-lotto-wrap"><span class="bar-lotto-num">${lotto}</span></div>`;
-    row.innerHTML=`${lottoHtml}<div class="bar-track">${segsHtml}</div><span class="bar-pct">${pctLabel}</span>${msHtml}`;
+    row.innerHTML=`${lottoHtml}<div class="bar-track">${segsHtml}</div><span class="bar-pct">${pctLabel}</span><span style="min-width:62px;text-align:right;font-size:9px;color:var(--text);font-family:'Fira Code',monospace;flex-shrink:0">${fmt(lottiTotale[lotto])} m</span>${msHtml}`;
     row.querySelectorAll('.bar-seg').forEach(seg=>{
       seg.addEventListener('mousemove',e=>{tooltip.textContent=seg.getAttribute('data-tip');tooltip.style.opacity='1';tooltip.style.left=(e.clientX+12)+'px';tooltip.style.top=(e.clientY-28)+'px';});
       seg.addEventListener('mouseleave',()=>{tooltip.style.opacity='0';});
