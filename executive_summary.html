@@ -1524,6 +1524,32 @@ async function saveToStorage(){
   }
 }
 
+function formatDateIT(isoStr){
+  const d = new Date(isoStr);
+  if(isNaN(d)) return null;
+  const mesi = 'gennaio febbraio marzo aprile maggio giugno luglio agosto settembre ottobre novembre dicembre'.split(' ');
+  return d.getDate() + ' ' + mesi[d.getMonth()] + ' ' + d.getFullYear();
+}
+
+function applyLastUploadDate(dateStr){
+  if(!dateStr) return;
+  R.data = dateStr;
+  const repDate = document.getElementById('repDate');
+  if(repDate) repDate.textContent = dateStr;
+  const pd = document.getElementById('printDate');
+  if(pd) pd.textContent = dateStr;
+  // Aggiorna lo <span> con la data nella card "Project Status" (dentro #main)
+  const mainEl = document.getElementById('main');
+  if(mainEl){
+    mainEl.querySelectorAll('span[contenteditable]').forEach(span => {
+      const par = span.parentElement;
+      if(par && par.textContent.includes('Permit authorizations')){
+        span.textContent = dateStr;
+      }
+    });
+  }
+}
+
 async function loadFromStorage(){
   try {
     const resp = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
@@ -1536,6 +1562,11 @@ async function loadFromStorage(){
       window._storicoCompleto = Array.isArray(data.storico) ? data.storico : [];
       document.getElementById('main').innerHTML = data[EXEC_BIN_KEY];
       document.querySelectorAll('[contenteditable]').forEach(el=>el.contentEditable='false');
+      // Aggiorna la data con l'ultimo caricamento Excel da index.html
+      if(data.last_excel_upload_at){
+        const dateStr = formatDateIT(data.last_excel_upload_at);
+        if(dateStr) applyLastUploadDate(dateStr);
+      }
       // Rigenera sempre Gantt e Permit con dati CSV freschi, ignorando i valori serializzati
       updateLiveData();
       return true;
@@ -1731,14 +1762,15 @@ function updateLiveData(){
 }
 
 async function init(){
-  const pd=document.getElementById('printDate');
-  if(pd) pd.textContent=document.getElementById('repDate')?.textContent||'';
   await loadCSVData();
   const restored = await loadFromStorage();
   if(!restored){
     render();
   }
   // se restored=true, loadFromStorage chiama già updateLiveData() + ensureGanttCardInDom()
+  // Aggiorna printDate con il valore finale di repDate (dopo storage/render)
+  const pd=document.getElementById('printDate');
+  if(pd) pd.textContent=document.getElementById('repDate')?.textContent||'';
   document.querySelectorAll('[contenteditable]').forEach(el=>el.contentEditable='false');
 }
 init();
