@@ -1006,25 +1006,39 @@ function clearSearch() {
 }
 
 // Cerca pratiche nel dataset GeoJSON
+// Gestisce tratte con piu pratiche separate da '|': ogni pratica e un risultato autonomo
 function searchPratiche(query) {
   const q = query.trim().toUpperCase();
   if (!q) return [];
   const results = [];
-  const seen = new Set();
+  const seen = new Set(); // chiave: singola_pratica|tratta_id
   allFeatures.forEach(f => {
     const p = f.properties;
-    const pratica = (p.PRATICA || '').toUpperCase();
-    const tratta  = (p.TRATTA_ID || '').toUpperCase();
-    // Cerca per codice pratica o tratta ID
-    if (pratica.includes(q) || tratta.includes(q)) {
-      const key = pratica + '|' + tratta;
-      if (!seen.has(key)) {
-        seen.add(key);
-        results.push({ type: 'pratica', feature: f, pratica: p.PRATICA||tratta, tratta: p.TRATTA_ID, lotto: p.LOTTO, stato: p.STATO_LEGENDA||p.STATO_AUTORIZZAZIONE||'', comune: p.COMUNE||'' });
+    const tratta = (p.TRATTA_ID || '').toUpperCase();
+    const pratiche = (p.PRATICA || '').split('|').map(s => s.trim()).filter(Boolean);
+
+    if (pratiche.length === 0) {
+      if (tratta.includes(q)) {
+        const key = '|' + tratta;
+        if (!seen.has(key)) {
+          seen.add(key);
+          results.push({ type: 'pratica', feature: f, pratica: p.TRATTA_ID||'--', tratta: p.TRATTA_ID, lotto: p.LOTTO, stato: p.STATO_LEGENDA||p.STATO_AUTORIZZAZIONE||'', comune: p.COMUNE||'' });
+        }
       }
+    } else {
+      pratiche.forEach(singola => {
+        const singolaUp = singola.toUpperCase();
+        if (singolaUp.includes(q) || tratta.includes(q)) {
+          const key = singolaUp + '|' + tratta;
+          if (!seen.has(key)) {
+            seen.add(key);
+            results.push({ type: 'pratica', feature: f, pratica: singola, tratta: p.TRATTA_ID, lotto: p.LOTTO, stato: p.STATO_LEGENDA||p.STATO_AUTORIZZAZIONE||'', comune: p.COMUNE||'' });
+          }
+        }
+      });
     }
   });
-  return results.slice(0, 8);
+  return results.slice(0, 12);
 }
 
 // Geocoding Nominatim
