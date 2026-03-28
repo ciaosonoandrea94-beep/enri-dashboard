@@ -1006,75 +1006,86 @@ function clearSearch() {
 }
 
 // Cerca pratiche nel dataset GeoJSON.
-// Due modalita distinte:
-//   1) Query corrisponde a un TRATTA_ID  → un risultato per tratta (con label di tutte le pratiche)
-//   2) Query corrisponde a un codice PRATICA → un risultato per singola pratica matchante
+// Una stessa tratta puo comparire come piu feature (segmenti diversi) con campi PRATICA
+// potenzialmente diversi: prima si costruisce un indice aggregato per TRATTA_ID,
+// poi si cerca su quello.
 function searchPratiche(query) {
   const q = query.trim().toUpperCase();
   if (!q || q.length < 2) return [];
 
-  // Splitta il campo PRATICA in array, gestendo separatori | ; ,
   function splitPratiche(raw) {
     return (raw || '').split(/[|;,]/).map(s => s.trim()).filter(Boolean);
   }
 
-  // Fase 1: cerca per TRATTA_ID (dedup per tratta_id — evita duplicati se la stessa
-  // tratta compare piu volte nel GeoJSON come feature separate)
-  const trattaResults = [];
-  const seenTratta = new Set();
+  // Passo 1: costruisce indice tratta_id → { feature, pratiche (Set unificato), lotto, stato, comune }
+  // Aggrega TUTTE le feature con lo stesso tratta_id cosi non si perde nessuna pratica
+  // presente su segmenti diversi della stessa tratta.
+  const trattaIndex = new Map(); // key: tratta_id uppercase
   allFeatures.forEach(f => {
     const p = f.properties;
-    const trattaId = (p.TRATTA_ID || '').toUpperCase();
-    if (trattaId.includes(q) && !seenTratta.has(trattaId)) {
-      seenTratta.add(trattaId);
-      const pratiche = splitPratiche(p.PRATICA);
-      const label = pratiche.length > 0
-        ? pratiche.join(' · ')
-        : (p.TRATTA_ID || '—');
-      trattaResults.push({
-        type: 'pratica',
-        feature: f,
-        pratica: label,          // mostra tutte le pratiche della tratta
-        tratta: p.TRATTA_ID,
+    const tid = (p.TRATTA_ID || '').trim();
+    if (!tid) return;
+    const tidUp = tid.toUpperCase();
+    if (!trattaIndex.has(tidUp)) {
+      trattaIndex.set(tidUp, {
+        feature: f,          // prima feature trovata (usata per zoomToFeature)
+        praticheSet: new Set(),
+        tratta: tid,
         lotto: p.LOTTO,
         stato: p.STATO_LEGENDA || p.STATO_AUTORIZZAZIONE || '',
         comune: p.COMUNE || ''
       });
     }
+    // Aggrega le pratiche di tutti i segmenti
+    splitPratiche(p.PRATICA).forEach(pr => trattaIndex.get(tidUp).praticheSet.add(pr));
   });
 
-  // Fase 2: cerca per codice PRATICA singolo (dedup per coppia pratica+tratta)
-  const praticaResults = [];
-  const seenPratica = new Set();
-  allFeatures.forEach(f => {
-    const p = f.properties;
-    const trattaId = p.TRATTA_ID || '';
-    const pratiche = splitPratiche(p.PRATICA);
-    pratiche.forEach(singola => {
+  const results = [];
+  const seenResult = new Set(); // evita righe doppie nel risultato finale
+
+  // Passo 2a: match su TRATTA_ID → un risultato per tratta con tutte le pratiche aggregate
+  trattaIndex.forEach((data, tidUp) => {
+    if (tidUp.includes(q)) {
+      const pratiche = [...data.praticheSet];
+      const label = pratiche.length > 0 ? pratiche.join(' · ') : data.tratta;
+      const key = 'T|' + tidUp;
+      if (!seenResult.has(key)) {
+        seenResult.add(key);
+        results.push({
+          type: 'pratica',
+          feature: data.feature,
+          pratica: label,
+          tratta: data.tratta,
+          lotto: data.lotto,
+          stato: data.stato,
+          comune: data.comune
+        });
+      }
+    }
+  });
+
+  // Passo 2b: match su singola PRATICA → un risultato per pratica matchante (per tratta)
+  trattaIndex.forEach((data, tidUp) => {
+    data.praticheSet.forEach(singola => {
       if (singola.toUpperCase().includes(q)) {
-        const key = singola.toUpperCase() + '||' + trattaId.toUpperCase();
-        if (!seenPratica.has(key)) {
-          seenPratica.add(key);
-          praticaResults.push({
+        const key = 'P|' + singola.toUpperCase() + '|' + tidUp;
+        if (!seenResult.has(key)) {
+          seenResult.add(key);
+          results.push({
             type: 'pratica',
-            feature: f,
+            feature: data.feature,
             pratica: singola,
-            tratta: p.TRATTA_ID,
-            lotto: p.LOTTO,
-            stato: p.STATO_LEGENDA || p.STATO_AUTORIZZAZIONE || '',
-            comune: p.COMUNE || ''
+            tratta: data.tratta,
+            lotto: data.lotto,
+            stato: data.stato,
+            comune: data.comune
           });
         }
       }
     });
   });
 
-  // Unisce: prima tratte, poi pratiche (evita di listare entrambe per la stessa query)
-  // Se ci sono risultati per tratta, non duplicare anche quelli per pratica per le stesse tratte
-  const trattaIds = new Set(trattaResults.map(r => (r.tratta || '').toUpperCase()));
-  const praticaOnly = praticaResults.filter(r => !trattaIds.has((r.tratta || '').toUpperCase()));
-
-  return [...trattaResults, ...praticaOnly].slice(0, 15);
+  return results.slice(0, 15);
 }
 
 // Geocoding Nominatim
