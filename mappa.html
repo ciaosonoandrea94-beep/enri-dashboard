@@ -215,6 +215,13 @@
   .qts-only-btn:hover{border-color:#5b21b6;background:#ddd6fe;color:#3b0764;}
   .qts-only-btn.active{background:#7c3aed;border-color:#7c3aed;color:#fff;}
 
+  /* Basemap selector */
+  .basemap-row{display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 0 6px;border-top:1px solid var(--border);}
+  .basemap-label{font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);flex:1;}
+  .basemap-toggle{display:flex;gap:3px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:2px;}
+  .basemap-btn{font-size:10px;padding:3px 8px;border-radius:5px;border:none;background:transparent;color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;transition:all 0.15s;white-space:nowrap;}
+  .basemap-btn.active{background:var(--accent);color:white;}
+
   /* QTS toggle */
   .qts-toggle-row { display:flex;align-items:center;gap:8px;margin-top:10px;padding:8px 0 6px;border-top:1px solid var(--border); }
   .qts-label { font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);flex:1; }
@@ -300,6 +307,14 @@
           <span class="qts-slider"></span>
         </label>
         <button id="qtsOnlyBtn" class="qts-only-btn" onclick="setQTSOnly(!qtsOnlyMode)">Solo QTS</button>
+      </div>
+      <div class="basemap-row">
+        <span class="basemap-label">🗺 Sfondo mappa</span>
+        <div class="basemap-toggle">
+          <button class="basemap-btn active" id="bmap-osm" onclick="setBaseLayer('osm')">Mappa</button>
+          <button class="basemap-btn" id="bmap-satellite" onclick="setBaseLayer('satellite')">Satellite</button>
+          <button class="basemap-btn" id="bmap-hybrid" onclick="setBaseLayer('hybrid')">Ibrida</button>
+        </div>
       </div>
     <div class="sidebar-body" id="lottoList"></div>
   </div>
@@ -624,10 +639,38 @@ const mainRenderer   = L.canvas({ tolerance: 5 });
 // (creato da circleMarker con preferCanvas:true) si sovrapponga al mainRenderer
 // intercettando tutti i click sulle tratte.
 const searchMarkerRenderer = L.svg();
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-  attribution:'© OpenStreetMap',
-  crossOrigin: true
-}).addTo(map);
+
+// ── BASEMAP LAYERS ───────────────────────────────────────────────────────────
+const baseLayers = {
+  osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap',
+    crossOrigin: true
+  }),
+  satellite: L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+    attribution: '© Google Maps',
+    crossOrigin: true,
+    maxZoom: 21
+  }),
+  hybrid: L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+    attribution: '© Google Maps',
+    crossOrigin: true,
+    maxZoom: 21
+  })
+};
+let currentBaseLayer = baseLayers.osm;
+currentBaseLayer.addTo(map);
+
+function setBaseLayer(type) {
+  map.removeLayer(currentBaseLayer);
+  currentBaseLayer = baseLayers[type];
+  currentBaseLayer.addTo(map);
+  currentBaseLayer.bringToBack();
+  // update button styles
+  document.querySelectorAll('.basemap-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('bmap-' + type).classList.add('active');
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 L.control.scale({imperial:false,position:'bottomright'}).addTo(map);
 
 function exportPDF(){
