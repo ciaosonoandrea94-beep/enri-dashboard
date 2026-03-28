@@ -733,28 +733,28 @@ const BMAP_META = [
   {
     key: 'catastale',
     label: 'Catastale',
-    thumb: 'https://tile.openstreetmap.org/10/545/372.png',
+    // Thumbnail statico WMS su Roma centro (zoom sufficiente per vedere le particelle)
+    thumb: 'https://wms.cartografia.agenziaentrate.gov.it/inspire/wms/ows01.php?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG:4326&BBOX=12.4840,41.8950,12.4870,41.8968&WIDTH=116&HEIGHT=80&LAYERS=CP.CadastralZoning,acque,strade,CP.CadastralParcel,fabbricati,vestizioni&STYLES=&FORMAT=image/png&TRANSPARENT=FALSE',
     layer: (() => {
-      // Converte tile XYZ → bbox in EPSG:6706 (ETRF2000) per WMS Agenzia delle Entrate
-      function tileToBBoxETRF2000(x, y, z) {
+      // WMS 1.1.1 + EPSG:4326: bbox = minLon, minLat, maxLon, maxLat (west, south, east, north)
+      function tileToBBox4326(x, y, z) {
         const n = Math.pow(2, z);
-        const lon1 = (x / n) * 360 - 180;
-        const lon2 = ((x + 1) / n) * 360 - 180;
-        const lat1 = Math.atan(Math.sinh(Math.PI * (1 - 2 * y / n))) * 180 / Math.PI;
-        const lat2 = Math.atan(Math.sinh(Math.PI * (1 - 2 * (y + 1) / n))) * 180 / Math.PI;
-        // EPSG:6706 usa ordine lat,lon
-        return `${lat2},${lon1},${lat1},${lon2}`;
+        const lon_w = (x / n) * 360 - 180;
+        const lon_e = ((x + 1) / n) * 360 - 180;
+        const lat_n = Math.atan(Math.sinh(Math.PI * (1 - 2 * y / n))) * 180 / Math.PI;
+        const lat_s = Math.atan(Math.sinh(Math.PI * (1 - 2 * (y + 1) / n))) * 180 / Math.PI;
+        return `${lon_w},${lat_s},${lon_e},${lat_n}`;
       }
       const CatastaleLayer = L.TileLayer.extend({
         getTileUrl: function(coords) {
-          const bbox = tileToBBoxETRF2000(coords.x, coords.y, coords.z);
+          const bbox = tileToBBox4326(coords.x, coords.y, coords.z);
           return 'https://wms.cartografia.agenziaentrate.gov.it/inspire/wms/ows01.php'
-            + '?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap'
+            + '?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap'
+            + '&SRS=EPSG:4326'
             + '&BBOX=' + bbox
-            + '&CRS=EPSG:4258&WIDTH=256&HEIGHT=256'
-            + '&LAYERS=CP.CadastralZoning,strade,acque,CP.CadastralParcel,fabbricati,vestizioni'
-            + '&STYLES=default&FORMAT=image/png'
-            + '&DPI=96&MAP_RESOLUTION=96&FORMAT_OPTIONS=dpi:96&TRANSPARENT=TRUE';
+            + '&WIDTH=256&HEIGHT=256'
+            + '&LAYERS=CP.CadastralZoning,acque,strade,CP.CadastralParcel,fabbricati,vestizioni'
+            + '&STYLES=&FORMAT=image/png&TRANSPARENT=TRUE';
         }
       });
       return L.layerGroup([
