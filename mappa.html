@@ -56,7 +56,7 @@
   .map-legend{
     position:absolute;
     right:316px;
-    bottom:16px;
+    bottom:52px;
     z-index:600;
     border:1px solid var(--border);
     border-radius:10px;
@@ -78,7 +78,7 @@
   .leaflet-popup-tip-container{display:none;}
   .leaflet-popup-close-button{display:none!important;}
   /* Popup layout */
-  .popup-inner{min-width:280px;max-width:340px;font-family:'DM Sans',sans-serif;}
+  .popup-inner{min-width:560px;max-width:640px;font-family:'DM Sans',sans-serif;}
   .popup-head{padding:14px 16px 12px;position:relative;}
   .popup-head-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
   .popup-lotto{font-size:18px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text);letter-spacing:-0.02em;}
@@ -88,9 +88,11 @@
   .popup-impresa{font-size:11px;font-weight:600;color:var(--accent);}
   .popup-tratta{font-size:10px;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-family:'DM Mono',monospace;}
   .popup-stato-bar{height:3px;width:100%;margin-top:12px;border-radius:2px;}
-  /* Body */
-  .popup-body{padding:12px 16px 14px;}
-  .popup-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;margin-bottom:12px;}
+  /* Body — due colonne */
+  .popup-body{display:flex;gap:0;align-items:stretch;}
+  .popup-body-left{flex:1;min-width:0;padding:12px 14px 14px 16px;}
+  .popup-body-right{width:210px;flex-shrink:0;border-left:1px solid var(--border);padding:12px 16px 14px 14px;display:flex;flex-direction:column;justify-content:flex-start;}
+  .popup-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px 12px;margin-bottom:12px;}
   .popup-field{display:flex;flex-direction:column;gap:2px;}
   .popup-field.full{grid-column:1/-1;}
   .popup-field-label{font-size:9px;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);font-weight:500;}
@@ -794,6 +796,34 @@ function makePopupHtml(p) {
       </div>
     </div>` : '';
 
+  // Lotto progress per colonna destra (senza border-top, ci pensa il layout)
+  const lottoProgressRightHtml = ls ? `
+    <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);font-weight:500;margin-bottom:10px;">Avanzamento lotto ${p.LOTTO||''}</div>
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+        <span style="font-size:10px;color:var(--muted)">Permessi ottenuti</span>
+        <span style="font-size:11px;font-weight:700;font-family:'DM Mono',monospace;color:#2e7d52">${lottoPct}%</span>
+      </div>
+      <div style="height:5px;background:#e8f5ee;border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${lottoPct}%;background:#3a8c5c;border-radius:3px"></div>
+      </div>
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+        <span style="font-size:10px;color:var(--muted)">Pratiche inviate+</span>
+        <span style="font-size:11px;font-weight:700;font-family:'DM Mono',monospace;color:${parseFloat(lottoSubmPct)>0?'#2563eb':'var(--muted)'};">${lottoSubmPct}%</span>
+      </div>
+      <div style="height:5px;background:#e8f0fe;border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${lottoSubmPct}%;background:#2563eb;border-radius:3px"></div>
+      </div>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:4px 8px;font-size:10px;color:var(--muted)">
+      <span>Questa tratta</span>
+      <span>Tot. lotto</span>
+      <strong style="color:var(--text);font-family:'DM Mono',monospace;font-size:11px">${trattaKm} km${trattaContrib?`<span style="font-weight:400;color:var(--muted);font-size:9px"> (${trattaContrib}%)</span>`:''}</strong>
+      <strong style="color:var(--text);font-family:'DM Mono',monospace;font-size:11px">${lottoKm} km</strong>
+    </div>` : '';
+
   return `<div class="popup-inner">
     <div class="popup-head">
       <div class="popup-head-top">
@@ -807,43 +837,45 @@ function makePopupHtml(p) {
       <div style="height:3px;width:100%;margin-top:12px;border-radius:2px;background:${color}33;overflow:hidden"><div style="height:100%;width:100%;background:${color};opacity:0.75"></div></div>
     </div>
     <div class="popup-body">
-      <div class="popup-grid">
-        <div class="popup-field">
-          <span class="popup-field-label">Comune</span>
-          <span class="popup-field-val">${p.COMUNE||'—'}</span>
+      <div class="popup-body-left">
+        <div class="popup-grid">
+          <div class="popup-field">
+            <span class="popup-field-label">Comune</span>
+            <span class="popup-field-val">${p.COMUNE||'—'}</span>
+          </div>
+          <div class="popup-field">
+            <span class="popup-field-label">Cluster</span>
+            <span class="popup-field-val">${p.CLUSTER||'—'}</span>
+          </div>
+          <div class="popup-field">
+            <span class="popup-field-label">Lunghezza</span>
+            <span class="popup-field-val">${fmtM(p.LUNGHEZZA)}</span>
+          </div>
+          <div class="popup-field full">
+            <span class="popup-field-label">Ente</span>
+            <span class="popup-field-val" style="font-size:11px">${enti}</span>
+          </div>
+          <div class="popup-field">
+            <span class="popup-field-label">Tipologia</span>
+            <span class="popup-field-val">${p.TIPOLOGIA||'—'}</span>
+          </div>
         </div>
-        <div class="popup-field">
-          <span class="popup-field-label">Cluster</span>
-          <span class="popup-field-val">${p.CLUSTER||'—'}</span>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:${hasDetail||pratiche.length?'10px':'0'}">
+          <span class="popup-stato" style="background:${color}18;color:${color};border:1.5px solid ${color}44">
+            <span class="popup-stato-dot" style="background:${color}"></span>${statoDisplay}
+          </span>
+          ${lavHtml}
         </div>
-        <div class="popup-field full">
-          <span class="popup-field-label">Ente</span>
-          <span class="popup-field-val" style="font-size:11px">${enti}</span>
-        </div>
-        <div class="popup-field">
-          <span class="popup-field-label">Tipologia</span>
-          <span class="popup-field-val">${p.TIPOLOGIA||'—'}</span>
-        </div>
-        <div class="popup-field">
-          <span class="popup-field-label">Lunghezza</span>
-          <span class="popup-field-val">${fmtM(p.LUNGHEZZA)}</span>
-        </div>
+        ${hasDetail ? `<div class="popup-section">
+          <div class="popup-section-title">Dettaglio stato</div>
+          ${motivoHtml}${noHtml}${ordHtml}
+        </div>` : ''}
+        ${pratiche.length ? `<div class="popup-section">
+          <div class="popup-section-title">Pratiche</div>
+          <div>${praticheHtml}</div>
+        </div>` : ''}
       </div>
-      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:${hasDetail||pratiche.length?'12px':'0'}">
-        <span class="popup-stato" style="background:${color}18;color:${color};border:1.5px solid ${color}44">
-          <span class="popup-stato-dot" style="background:${color}"></span>${statoDisplay}
-        </span>
-        ${lavHtml}
-      </div>
-      ${hasDetail ? `<div class="popup-section">
-        <div class="popup-section-title">Dettaglio stato</div>
-        ${motivoHtml}${noHtml}${ordHtml}
-      </div>` : ''}
-      ${pratiche.length ? `<div class="popup-section">
-        <div class="popup-section-title">Pratiche</div>
-        <div>${praticheHtml}</div>
-      </div>` : ''}
-      ${lottoProgressHtml}
+      ${ls ? `<div class="popup-body-right">${lottoProgressRightHtml}</div>` : ''}
     </div>
   </div>`;
 }
@@ -1285,7 +1317,7 @@ function toggleQTS(on) {
           weight:4, opacity:0.95, smoothFactor:1.5
         }),
         onEachFeature:(f,layer)=>{
-          layer.bindPopup(makePopupHtml(f.properties),{maxWidth:340});
+          layer.bindPopup(makePopupHtml(f.properties),{maxWidth:640});
           layer.on('mouseover',e=>{e.target.setStyle({weight:6,opacity:1});e.target.bringToFront();});
           layer.on('mouseout',e=>{
             if(_highlightedLayer===e.target) return;
