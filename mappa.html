@@ -760,7 +760,9 @@ const BMAP_META = [
       return L.layerGroup([
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
           attribution: '© CartoDB',
-          crossOrigin: true
+          crossOrigin: true,
+          maxZoom: 21,
+          maxNativeZoom: 19
         }),
         new CatastaleLayer('', {
           attribution: '© <a href="https://www.agenziaentrate.gov.it">Agenzia delle Entrate</a> – CC BY 4.0',
