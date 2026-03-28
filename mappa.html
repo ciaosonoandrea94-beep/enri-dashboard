@@ -733,22 +733,43 @@ const BMAP_META = [
   {
     key: 'catastale',
     label: 'Catastale',
-    // miniatura OSM + overlay catastale OpenStreetMap-based (Cadastre FR non disponibile, usiamo OSM standard con sfondo chiaro)
-    thumb: 'https://a.basemaps.cartocdn.com/light_all/10/545/372.png',
-    // Layer base chiaro + overlay catasto da tile.cadastre.gouv non disponibile in IT
-    // Usiamo OSM con stile chiaro + overlay OpenStreetMap catastale (openmaps)
-    layer: L.layerGroup([
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        attribution: '© CartoDB | © OpenStreetMap',
-        crossOrigin: true
-      }),
-      L.tileLayer('https://tms.cadastre.openstreetmap.fr/*/tout/{z}/{x}/{y}.png', {
-        opacity: 0.85,
-        attribution: '© Cadastre FR via OSM (dati indicativi)',
-        crossOrigin: true,
-        maxZoom: 20
-      })
-    ])
+    thumb: 'https://tile.openstreetmap.org/10/545/372.png',
+    layer: (() => {
+      // Converte tile XYZ → bbox in EPSG:6706 (ETRF2000) per WMS Agenzia delle Entrate
+      function tileToBBoxETRF2000(x, y, z) {
+        const n = Math.pow(2, z);
+        const lon1 = (x / n) * 360 - 180;
+        const lon2 = ((x + 1) / n) * 360 - 180;
+        const lat1 = Math.atan(Math.sinh(Math.PI * (1 - 2 * y / n))) * 180 / Math.PI;
+        const lat2 = Math.atan(Math.sinh(Math.PI * (1 - 2 * (y + 1) / n))) * 180 / Math.PI;
+        // EPSG:6706 usa ordine lat,lon
+        return `${lat2},${lon1},${lat1},${lon2}`;
+      }
+      const CatastaleLayer = L.TileLayer.extend({
+        getTileUrl: function(coords) {
+          const bbox = tileToBBoxETRF2000(coords.x, coords.y, coords.z);
+          return 'https://wms.cartografia.agenziaentrate.gov.it/inspire/wms/ows01.php'
+            + '?language=ita&service=WMS&version=1.3.0&request=GetMap'
+            + '&bbox=' + bbox
+            + '&crs=EPSG:6706&width=256&height=256'
+            + '&layers=province,CP.CadastralZoning,acque,CP.CadastralParcel,fabbricati,codice_plla,simbolo_graffa'
+            + '&styles=default&format=image/png'
+            + '&DPI=96&map_resolution=96&format_options=dpi:96&transparent=true';
+        }
+      });
+      return L.layerGroup([
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+          attribution: '© CartoDB',
+          crossOrigin: true
+        }),
+        new CatastaleLayer('', {
+          attribution: '© <a href="https://www.agenziaentrate.gov.it">Agenzia delle Entrate</a> – CC BY 4.0',
+          maxZoom: 21,
+          opacity: 1,
+          crossOrigin: true
+        })
+      ]);
+    })()
   }
 ];
 
