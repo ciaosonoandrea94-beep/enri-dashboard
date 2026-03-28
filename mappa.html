@@ -961,7 +961,11 @@ function clearSearch() {
   inputEl.value = '';
   resultsEl.style.display = 'none';
   clearBtn.style.display = 'none';
-  if (searchMarker) { map.removeLayer(searchMarker); searchMarker = null; }
+  if (searchMarker) {
+    searchMarker.off('popupclose'); // evita loop: rimuoviamo il listener prima di chiudere
+    map.removeLayer(searchMarker);
+    searchMarker = null;
+  }
   clearHighlight();
 }
 
@@ -1044,9 +1048,20 @@ function renderResults(pratiche, addresses, query) {
         </div>`;
       item.onclick = () => {
         if (searchMarker) map.removeLayer(searchMarker);
+        const popupHtml = `
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 8px">
+            <span style="font-size:12px;color:var(--text);flex:1">${r.display}</span>
+            <button onclick="clearSearch()" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;line-height:1;padding:0 2px;flex-shrink:0" title="Chiudi">✕</button>
+          </div>`;
         searchMarker = L.circleMarker([r.lat, r.lon], {
           radius: 8, color: '#4f8ef7', fillColor: '#4f8ef7', fillOpacity: 0.8, weight: 2
-        }).addTo(map).bindPopup(`<div style="font-size:12px;color:#e8eaf0;padding:4px">${r.display}</div>`).openPopup();
+        }).addTo(map).bindPopup(popupHtml, {closeButton: false});
+        // Quando si chiude il popup rimuove il marker così le tratte tornano cliccabili
+        searchMarker.on('popupclose', () => {
+          if (searchMarker) { map.removeLayer(searchMarker); searchMarker = null; }
+          clearBtn.style.display = inputEl.value ? 'block' : 'none';
+        });
+        searchMarker.openPopup();
         map.setView([r.lat, r.lon], r.zoom);
         resultsEl.style.display = 'none';
         clearBtn.style.display = 'block';
