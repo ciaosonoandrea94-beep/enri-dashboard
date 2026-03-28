@@ -615,8 +615,6 @@ function updateLegend(mode) {
 }
 
 map = L.map('map',{center:[45.48,9.30],zoom:10,zoomControl:true,attributionControl:true,preferCanvas:true});
-// Fix: reset cursore dopo ogni spostamento programmatico (es. ricerca indirizzo/permesso)
-map.on('moveend', () => { map.getContainer().style.cursor = ''; });
 // Renderer separati: outlineRenderer NON interattivo, mainRenderer interattivo
 const outlineRenderer = L.canvas({ tolerance: 0 });
 const mainRenderer   = L.canvas({ tolerance: 5 });
@@ -1040,15 +1038,19 @@ function renderResults(pratiche, addresses, query) {
           <div class="search-result-main">${r.display}</div>
         </div>`;
       item.onclick = () => {
-        map.setView([r.lat, r.lon], r.zoom);
         if (searchMarker) map.removeLayer(searchMarker);
         searchMarker = L.circleMarker([r.lat, r.lon], {
           radius: 8, color: '#4f8ef7', fillColor: '#4f8ef7', fillOpacity: 0.8, weight: 2
-        }).addTo(map).bindPopup(`<div style="font-size:12px;color:#e8eaf0;padding:4px">${r.display}</div>`).openPopup();
+        }).addTo(map).bindPopup(`<div style="font-size:12px;color:#e8eaf0;padding:4px">${r.display}</div>`);
+        // Fix: reset cursore DOPO che tutta la sequenza di movimenti è finita
+        map.once('moveend', () => {
+          map.getContainer().style.cursor = '';
+          map.dragging._draggable._moving = false;
+        });
+        map.setView([r.lat, r.lon], r.zoom);
+        searchMarker.openPopup();
         resultsEl.style.display = 'none';
         clearBtn.style.display = 'block';
-        // Fix: reset cursore dopo setView (Leaflet lascia il cursore in stato "grab")
-        setTimeout(() => { map.getContainer().style.cursor = ''; }, 0);
       };
       resultsEl.appendChild(item);
     });
