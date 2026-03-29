@@ -370,6 +370,7 @@
 
     <div class="sidebar-body" id="lottoList"></div>
   </div>
+  <div id="statsBar" class="stats-bar"></div>
   <div class="legend map-legend" id="legendContainer">
     <div class="legend-title">Stato</div>
     <div class="legend-item"><div class="legend-line" style="background:#3a8c5c"></div>Ottenuto</div>
@@ -975,8 +976,10 @@ function exportImage(){
 
     } catch(e) {
       alert('Errore export: ' + e.message);
+    } finally {
+      btn.textContent = '🖼 Immagine'; btn.disabled = false;
+      map.getContainer().style.cursor = '';
     }
-    btn.textContent = '\U0001f5bc Immagine'; btn.disabled = false;
   }, 400);
 }
 
@@ -1182,6 +1185,7 @@ function renderSidebar(stats) {
   renderFilterLotto(stats);
 
   const list=document.getElementById('lottoList');
+  if (!list) return;  // guard
   list.innerHTML='';
   LOTTO_ORDER.forEach(id=>{
     const s=stats[id]; if(!s) return;
@@ -1225,6 +1229,7 @@ function zoomLotto(id) {
 
 function buildStatsBar(stats, features) {
   const bar=document.getElementById('statsBar');
+  if (!bar) return;  // guard: elemento non presente nel DOM
   bar.innerHTML='';
   let totTot=0,totOtt=0,totLav=0;
   Object.values(stats).forEach(s=>{totTot+=s.totale;totOtt+=s.ottenuto;totLav+=s.lavorabili;});
