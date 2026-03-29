@@ -345,7 +345,7 @@
   <div id="loadingOverlay"><div class="spinner"></div><div class="loading-text">Caricamento tracciati...</div></div>
   <div id="map"></div>
   <div id="catastaleNotice" class="catastale-notice">
-    🔍 Zoom al livello 15+ per vedere le particelle catastali
+    🔍 Zoom al livello 14+ per vedere le particelle catastali
   </div>
   <div class="sidebar">
     <div class="sidebar-head">
@@ -744,14 +744,17 @@ const BMAP_META = [
         options: { tileSize: 256, opacity: 1 },
         createTile: function(coords, done) {
           // AdE non serve particelle sotto zoom 15 — tile trasparente, zero richieste HTTP
-          if (coords.z < 15) {
+          if (coords.z < 14) {
             const c = document.createElement('canvas');
             c.width = c.height = 256;
             done(null, c);
             return c;
           }
           const img = document.createElement('img');
-          img.crossOrigin = 'anonymous'; // richiesto per export screenshot su canvas
+          // NON impostare crossOrigin: il WMS AdE non restituisce header CORS,
+          // il browser bloccherebbe silenziosamente le tile (onerror → canvas trasparente).
+          // Le tile caricate senza crossOrigin non sono usabili su canvas per l'export,
+          // ma almeno sono visibili nella mappa.
           img.style.cssText = 'width:256px;height:256px;display:block;';
           const n = Math.pow(2, coords.z);
           const lon_w = (coords.x / n) * 360 - 180;
@@ -889,7 +892,7 @@ function _updateBasemapControl() {
 function _updateCatastaleNotice() {
   const el = document.getElementById('catastaleNotice');
   if (!el) return;
-  const show = _currentBmapKey === 'catastale' && map.getZoom() < 15;
+  const show = _currentBmapKey === 'catastale' && map.getZoom() < 14;
   el.classList.toggle('visible', show);
 }
 map.on('zoomend', _updateCatastaleNotice);
