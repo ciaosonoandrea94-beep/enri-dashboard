@@ -294,6 +294,64 @@
     margin-top: 8px !important;
     margin-left: 10px !important;
   }
+  /* ── SITI PANEL ── */
+  .siti-panel {
+    position:absolute; top:60px; right:16px; z-index:1500;
+    background:#fffffff5; backdrop-filter:blur(12px);
+    border:1px solid var(--border); border-radius:12px;
+    box-shadow:0 8px 32px #00000022;
+    width:280px; max-height:420px;
+    display:flex; flex-direction:column;
+    opacity:0; pointer-events:none;
+    transform:translateY(-6px);
+    transition:opacity 0.18s, transform 0.18s;
+  }
+  .siti-panel.open { opacity:1; pointer-events:all; transform:translateY(0); }
+  .siti-panel-head {
+    padding:12px 14px 10px;
+    border-bottom:1px solid var(--border);
+    flex-shrink:0;
+  }
+  .siti-panel-title {
+    font-size:10px; text-transform:uppercase; letter-spacing:0.1em;
+    color:var(--muted); font-weight:600;
+  }
+  .siti-search {
+    margin-top:8px; width:100%;
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:6px; padding:5px 10px;
+    font-size:11px; color:var(--text);
+    font-family:'DM Sans',sans-serif; outline:none;
+    transition:border-color 0.2s; box-sizing:border-box;
+  }
+  .siti-search:focus { border-color:var(--accent); }
+  .siti-search::placeholder { color:var(--muted); }
+  .siti-list {
+    overflow-y:auto; flex:1;
+    padding:6px 0;
+  }
+  .siti-list::-webkit-scrollbar { width:4px; }
+  .siti-list::-webkit-scrollbar-track { background:transparent; }
+  .siti-list::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+  .sito-item {
+    display:flex; align-items:center; gap:10px;
+    padding:8px 14px; cursor:pointer;
+    transition:background 0.13s;
+    border-bottom:1px solid #dde1ec22;
+  }
+  .sito-item:last-child { border-bottom:none; }
+  .sito-item:hover { background:var(--surface2); }
+  .sito-icon {
+    width:28px; height:28px; border-radius:8px;
+    background:var(--accent); color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; flex-shrink:0;
+  }
+  .sito-info { flex:1; min-width:0; }
+  .sito-name { font-size:12px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sito-coords { font-size:9px; color:var(--muted); font-family:'DM Mono',monospace; margin-top:1px; }
+  .sito-arrow { color:var(--muted); font-size:12px; flex-shrink:0; }
+  .sito-empty { padding:20px 14px; font-size:11px; color:var(--muted); text-align:center; }
   /* ── HELP MODAL ── */
   #helpOverlay {
     position:fixed;inset:0;background:#0007;display:flex;align-items:center;
@@ -337,6 +395,7 @@
     <span class="badge" id="statusBadge">⏳ Caricamento</span>
     <button class="btn" style="background:#2f5496" onclick="exportPDF()">⬇ PDF</button>
     <button class="btn" style="background:#1a5c3a" onclick="exportImage()">🖼 Immagine</button>
+    <button class="btn secondary" onclick="toggleSitiPanel()" id="sitiBtn" title="Siti di interesse">📍 Siti</button>
     <button class="help-btn" onclick="openHelp()" title="Guida alla Mappa">?</button>
     <a href="index.html" class="btn-back">
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7l5 5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -353,6 +412,17 @@
        title="Clicca per zoomare al livello 14">
     🗺 Zoom in per il catasto
   </div>
+  <!-- Siti Panel -->
+  <div id="sitiPanel" class="siti-panel">
+    <div class="siti-panel-head">
+      <div class="siti-panel-title">📍 Siti di interesse</div>
+      <input class="siti-search" id="sitiSearch" type="text"
+             placeholder="Cerca sito..." autocomplete="off"
+             oninput="filterSiti(this.value)">
+    </div>
+    <div class="siti-list" id="sitiList"></div>
+  </div>
+
   <div class="sidebar">
     <div class="sidebar-head">
       <div class="sidebar-title">Visualizzazione</div>
@@ -1686,6 +1756,84 @@ function toggleQTS(on) {
       <div style="color:var(--muted);font-size:12px">${e.message}</div>`;
   }
 })();
+
+// ── SITI DI INTERESSE ───────────────────────────────────────────────────────
+// Modifica qui l'elenco dei siti: { name, lat, lon, icon (emoji), zoom (opzionale) }
+const SITI = [
+  { name: 'Milano – Piazza Duomo',        lat: 45.4641, lon: 9.1919,  icon: '🏛', zoom: 16 },
+  { name: 'Corsico – Municipio',          lat: 45.4314, lon: 9.1128,  icon: '🏢', zoom: 16 },
+  { name: 'Buccinasco – Centro',          lat: 45.4120, lon: 9.1186,  icon: '📍', zoom: 15 },
+  { name: 'Cesano Boscone',               lat: 45.4480, lon: 9.0890,  icon: '📍', zoom: 15 },
+  { name: 'Rozzano – Nodo Autostradale',  lat: 45.3820, lon: 9.1510,  icon: '🔀', zoom: 15 },
+  { name: 'Sesto Ulteriano',              lat: 45.3960, lon: 9.2140,  icon: '📍', zoom: 15 },
+];
+
+let _sitiPanelOpen = false;
+
+function toggleSitiPanel() {
+  _sitiPanelOpen = !_sitiPanelOpen;
+  const panel = document.getElementById('sitiPanel');
+  const btn   = document.getElementById('sitiBtn');
+  panel.classList.toggle('open', _sitiPanelOpen);
+  btn.classList.toggle('active', _sitiPanelOpen);
+  if (_sitiPanelOpen) {
+    renderSitiList(SITI);
+    setTimeout(() => document.getElementById('sitiSearch').focus(), 120);
+    // chiudi cliccando fuori
+    setTimeout(() => document.addEventListener('click', _closeSitiOutside), 0);
+  } else {
+    document.removeEventListener('click', _closeSitiOutside);
+  }
+}
+
+function _closeSitiOutside(e) {
+  const panel = document.getElementById('sitiPanel');
+  const btn   = document.getElementById('sitiBtn');
+  if (!panel.contains(e.target) && !btn.contains(e.target)) {
+    _sitiPanelOpen = false;
+    panel.classList.remove('open');
+    btn.classList.remove('active');
+    document.removeEventListener('click', _closeSitiOutside);
+  }
+}
+
+function renderSitiList(list) {
+  const el = document.getElementById('sitiList');
+  el.innerHTML = '';
+  if (!list.length) {
+    el.innerHTML = '<div class="sito-empty">Nessun sito trovato</div>';
+    return;
+  }
+  list.forEach(s => {
+    const item = document.createElement('div');
+    item.className = 'sito-item';
+    item.innerHTML = `
+      <div class="sito-icon">${s.icon || '📍'}</div>
+      <div class="sito-info">
+        <div class="sito-name">${s.name}</div>
+        <div class="sito-coords">${s.lat.toFixed(4)}, ${s.lon.toFixed(4)}</div>
+      </div>
+      <span class="sito-arrow">›</span>`;
+    item.onclick = () => goToSito(s);
+    el.appendChild(item);
+  });
+}
+
+function filterSiti(query) {
+  const q = query.trim().toLowerCase();
+  const filtered = q ? SITI.filter(s => s.name.toLowerCase().includes(q)) : SITI;
+  renderSitiList(filtered);
+}
+
+function goToSito(s) {
+  map.setView([s.lat, s.lon], s.zoom || 15, { animate: true });
+  // chiudi il pannello
+  _sitiPanelOpen = false;
+  document.getElementById('sitiPanel').classList.remove('open');
+  document.getElementById('sitiBtn').classList.remove('active');
+  document.removeEventListener('click', _closeSitiOutside);
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 function openHelp() { document.getElementById("helpOverlay").classList.add("open"); }
 </script>
