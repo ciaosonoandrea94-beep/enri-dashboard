@@ -1077,69 +1077,221 @@ function _buildLoginModal() {
   const overlay = document.createElement('div');
   overlay.id = 'loginOverlay';
   overlay.style.cssText = `
-    position:fixed;inset:0;background:rgba(28,28,46,.6);backdrop-filter:blur(6px);
+    position:fixed;inset:0;
+    background:rgba(11,25,70,.45);
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
     z-index:9999;display:flex;align-items:center;justify-content:center;
+    animation:_loginFadeIn .25s ease both;
   `;
+
   const savedUser = localStorage.getItem('_enri_user');
   const isReturning = !!savedUser;
 
   overlay.innerHTML = `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;
-      padding:36px 40px;width:380px;max-width:94vw;box-shadow:0 24px 60px rgba(11,49,130,.18);">
-      <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:700;
-        color:var(--accent);letter-spacing:-0.02em;margin-bottom:4px">ENRI Dashboard</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:28px">
-        ${isReturning ? `Bentornato, <strong>${savedUser}</strong>. Conferma il tuo nome per accedere.` : 'Inserisci il tuo nome per accedere alla dashboard.'}
+    <style>
+      @keyframes _loginFadeIn  { from{opacity:0} to{opacity:1} }
+      @keyframes _loginSlideUp { from{opacity:0;transform:translateY(20px) scale(.975)} to{opacity:1;transform:translateY(0) scale(1)} }
+      @keyframes _loginPulse   { 0%,100%{opacity:.25} 50%{opacity:.55} }
+      @keyframes _loginOrbit   { to{transform:rotate(360deg)} }
+
+      #_loginCard {
+        display:flex;
+        width:700px;max-width:96vw;
+        background:var(--surface);
+        border-radius:22px;overflow:hidden;
+        box-shadow:0 40px 100px rgba(11,49,130,.28),0 8px 28px rgba(0,0,0,.14);
+        animation:_loginSlideUp .45s cubic-bezier(.22,.68,0,1.15) .08s both;
+      }
+
+      /* ── PANNELLO SINISTRO ── */
+      #_loginLeft {
+        flex:0 0 220px;
+        background:linear-gradient(148deg,#0d3a9a 0%,#0a2874 45%,#071d5a 100%);
+        padding:40px 28px;
+        display:flex;flex-direction:column;justify-content:space-between;
+        position:relative;overflow:hidden;
+      }
+      #_loginLeft::before {
+        content:'';position:absolute;top:-90px;left:-90px;
+        width:280px;height:280px;border-radius:50%;
+        border:1.5px solid rgba(255,255,255,.07);
+      }
+      #_loginLeft::after {
+        content:'';position:absolute;bottom:-70px;right:-70px;
+        width:220px;height:220px;border-radius:50%;
+        border:1.5px solid rgba(229,80,0,.22);
+        animation:_loginPulse 4s ease-in-out infinite;
+      }
+      ._loginDots {
+        position:absolute;bottom:28px;left:28px;
+        display:grid;grid-template-columns:repeat(5,1fr);gap:7px;opacity:.18;
+      }
+      ._loginDot { width:4px;height:4px;border-radius:50%;background:#fff; }
+      ._loginAccentLine {
+        width:28px;height:2.5px;border-radius:2px;
+        background:linear-gradient(90deg,#E55000,#ff7533);
+        margin:14px 0 18px;
+      }
+
+      /* ── PANNELLO DESTRO ── */
+      #_loginRight {
+        flex:1;padding:42px 38px;display:flex;flex-direction:column;justify-content:center;
+      }
+
+      /* Input */
+      #_loginInput {
+        width:100%;padding:11px 16px;
+        border:1.5px solid var(--border2);border-radius:10px;
+        font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;color:var(--text);
+        background:var(--surface);outline:none;
+        transition:border-color .2s,box-shadow .2s;
+        box-sizing:border-box;
+      }
+      #_loginInput:focus {
+        border-color:var(--accent);
+        box-shadow:0 0 0 3px rgba(11,49,130,.1);
+      }
+
+      /* Button */
+      #_loginBtn {
+        width:100%;padding:12px;border-radius:10px;
+        background:var(--accent);color:#fff;border:none;cursor:pointer;
+        font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;
+        letter-spacing:.03em;
+        transition:background .2s,transform .18s,box-shadow .18s;
+        box-shadow:0 3px 14px rgba(11,49,130,.28);
+        display:flex;align-items:center;justify-content:center;gap:8px;
+      }
+      #_loginBtn:hover:not(:disabled) {
+        background:#0a2a80;
+        transform:translateY(-1px);
+        box-shadow:0 6px 22px rgba(11,49,130,.36);
+      }
+      #_loginBtn:active:not(:disabled) { transform:translateY(0); }
+      #_loginBtn:disabled { opacity:.6;cursor:not-allowed;transform:none; }
+
+      /* Error */
+      #_loginError {
+        font-size:11px;color:#C23B22;margin-top:8px;display:none;
+        padding:8px 12px;background:#C23B220D;
+        border:1px solid #C23B2230;border-radius:7px;line-height:1.5;
+      }
+
+      /* Divider label */
+      ._loginDivider {
+        display:flex;align-items:center;gap:8px;
+        margin-top:16px;font-size:10px;color:var(--muted2);
+      }
+      ._loginDivider::before,._loginDivider::after {
+        content:'';flex:1;height:1px;background:var(--border);
+      }
+
+      @media(max-width:560px){
+        #_loginLeft { display:none; }
+        #_loginRight { padding:34px 28px; }
+      }
+    </style>
+
+    <div id="_loginCard">
+
+      <!-- SINISTRA: branding -->
+      <div id="_loginLeft">
+        <div class="_loginDots">
+          ${Array(20).fill('<div class="_loginDot"></div>').join('')}
+        </div>
+
+        <div style="position:relative;z-index:1">
+          <div style="font-family:'Fira Code',monospace;font-size:9px;font-weight:500;
+            letter-spacing:.2em;text-transform:uppercase;
+            color:rgba(229,80,0,.8);margin-bottom:12px">Progetto</div>
+
+          <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:34px;font-weight:700;
+            letter-spacing:-.03em;color:#fff;line-height:1">ENRI</div>
+
+          <div class="_loginAccentLine"></div>
+
+          <div style="font-size:11px;color:rgba(255,255,255,.5);line-height:1.8;
+            font-family:'Plus Jakarta Sans',sans-serif">
+            Dashboard<br>Avanzamento<br>Pratiche
+          </div>
+        </div>
+
+        <div style="position:relative;z-index:1">
+          <div style="font-size:9px;letter-spacing:.15em;text-transform:uppercase;
+            color:rgba(255,255,255,.25);font-family:'Fira Code',monospace">
+            Sistema di monitoraggio
+          </div>
+        </div>
       </div>
-      <div style="margin-bottom:16px">
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;
-          color:var(--muted);display:block;margin-bottom:6px">Nome utente</label>
-        <input id="loginInput" type="text" placeholder="${isReturning ? savedUser : 'Es. Mario Rossi'}"
-          value="${isReturning ? savedUser : ''}"
-          style="width:100%;padding:10px 14px;border:1.5px solid var(--border2);border-radius:8px;
-            font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;color:var(--text);
-            background:var(--surface);outline:none;transition:border-color .2s;"
-          onfocus="this.style.borderColor='var(--accent)'"
-          onblur="this.style.borderColor='var(--border2)'"
-          onkeydown="if(event.key==='Enter')document.getElementById('loginBtn').click()"
-        />
-        <div id="loginError" style="font-size:11px;color:#C23B22;margin-top:6px;display:none"></div>
-      </div>
-      <button id="loginBtn" style="width:100%;padding:11px;border-radius:8px;background:var(--accent);
-        color:#fff;border:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;
-        font-size:13px;font-weight:700;letter-spacing:0.02em;transition:all .18s;"
-        onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
-        Accedi →
-      </button>
-      <div style="margin-top:14px;font-size:10px;color:var(--muted2);text-align:center">
-        Il tuo nome viene registrato nel log accessi
+
+      <!-- DESTRA: form -->
+      <div id="_loginRight">
+
+        <div style="margin-bottom:30px">
+          <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:700;
+            color:var(--text);letter-spacing:-.025em;line-height:1.2;margin-bottom:8px">
+            ${isReturning ? 'Bentornato 👋' : 'Accedi alla Dashboard'}
+          </div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.6">
+            ${isReturning
+              ? `Ciao, <strong style="color:var(--text2);font-weight:600">${savedUser}</strong>. Conferma il tuo nome per continuare.`
+              : 'Inserisci il tuo nome per accedere al sistema di monitoraggio.'}
+          </div>
+        </div>
+
+        <div style="margin-bottom:20px">
+          <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;
+            color:var(--muted);display:block;margin-bottom:8px">Nome e cognome</label>
+          <input id="_loginInput" type="text"
+            placeholder="${isReturning ? savedUser : 'Es. Mario Rossi'}"
+            value="${isReturning ? savedUser : ''}"
+            onkeydown="if(event.key==='Enter')document.getElementById('_loginBtn').click()"
+          />
+          <div id="_loginError"></div>
+        </div>
+
+        <button id="_loginBtn">
+          <span id="_loginBtnText">${isReturning ? 'Conferma e accedi' : 'Accedi'}</span>
+          <span id="_loginBtnArrow">→</span>
+        </button>
+
+        <div class="_loginDivider">
+          Accesso registrato nel log
+        </div>
+
       </div>
     </div>
   `;
+
   document.body.appendChild(overlay);
 
   // Focus automatico
   setTimeout(() => {
-    const inp = document.getElementById('loginInput');
+    const inp = document.getElementById('_loginInput');
     if (inp) { inp.focus(); if (inp.value) inp.select(); }
-  }, 100);
+  }, 180);
 
-  document.getElementById('loginBtn').addEventListener('click', () => _handleLogin());
+  document.getElementById('_loginBtn').addEventListener('click', () => _handleLogin());
 }
 
 async function _handleLogin() {
-  const input = document.getElementById('loginInput');
-  const errEl = document.getElementById('loginError');
-  const btn   = document.getElementById('loginBtn');
+  const input = document.getElementById('_loginInput');
+  const errEl = document.getElementById('_loginError');
+  const btn   = document.getElementById('_loginBtn');
+  const btnText = document.getElementById('_loginBtnText');
+  const btnArrow = document.getElementById('_loginBtnArrow');
   const nome  = (input?.value || '').trim();
 
   if (!nome || nome.length < 2) {
     errEl.textContent = 'Inserisci almeno 2 caratteri.';
     errEl.style.display = 'block';
+    input.focus();
     return;
   }
 
-  btn.textContent = 'Accesso in corso…';
+  if (btnText) btnText.textContent = 'Accesso in corso…';
+  if (btnArrow) btnArrow.textContent = '';
   btn.disabled = true;
   errEl.style.display = 'none';
 
@@ -1154,7 +1306,8 @@ async function _handleLogin() {
       // Nome non corrisponde a quello salvato
       errEl.textContent = `Nome non riconosciuto. Hai usato "${savedUser}" in precedenza.`;
       errEl.style.display = 'block';
-      btn.textContent = 'Accedi →';
+      if (btnText) btnText.textContent = isReturning ? 'Conferma e accedi' : 'Accedi';
+      if (btnArrow) btnArrow.textContent = '→';
       btn.disabled = false;
       return;
     }
@@ -1193,7 +1346,8 @@ async function _handleLogin() {
     localStorage.setItem('_enri_user', nome);
     document.getElementById('loginOverlay').remove();
     _showUserBadge(nome);
-    btn.textContent = 'Accedi →';
+    if (btnText) btnText.textContent = 'Accedi';
+    if (btnArrow) btnArrow.textContent = '→';
     btn.disabled = false;
   }
 }
