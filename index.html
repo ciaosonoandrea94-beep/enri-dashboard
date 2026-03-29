@@ -1100,11 +1100,34 @@ function _formatDate(isoStr) {
 function _showUserBadge(nome) {
   const topbarLeft = document.querySelector('.topbar-left');
   if (topbarLeft && !topbarLeft.querySelector('.badge.ok')) {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;flex-direction:column;align-items:flex-start;gap:4px';
+
     const badge = document.createElement('span');
     badge.className = 'badge ok';
     badge.style.cssText = 'font-size:11px;padding:3px 10px;cursor:default';
     badge.textContent = '👤 ' + nome;
-    topbarLeft.appendChild(badge);
+
+    const logoutBtn = document.createElement('button');
+    logoutBtn.textContent = 'Esci';
+    logoutBtn.style.cssText = `
+      font-size:9px;padding:2px 8px;border-radius:5px;cursor:pointer;
+      background:transparent;color:#C23B22;border:1px solid #C23B2244;
+      font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;
+      letter-spacing:.03em;transition:all .15s;
+    `;
+    logoutBtn.onmouseover = () => { logoutBtn.style.background='#C23B220D'; logoutBtn.style.borderColor='#C23B22'; };
+    logoutBtn.onmouseout  = () => { logoutBtn.style.background='transparent'; logoutBtn.style.borderColor='#C23B2244'; };
+    logoutBtn.onclick = () => {
+      if (!confirm('Vuoi cambiare utente?')) return;
+      localStorage.removeItem('_enri_user');
+      localStorage.removeItem('_enri_role');
+      location.reload();
+    };
+
+    wrap.appendChild(badge);
+    wrap.appendChild(logoutBtn);
+    topbarLeft.appendChild(wrap);
   }
 }
 
@@ -4154,11 +4177,6 @@ function openHelp() { document.getElementById("helpOverlay").classList.add("open
     <div style="font-size:11px;color:var(--muted)">Come usare la dashboard</div>
 
     <div class="help-section">
-      <h4>Aggiornare i dati</h4>
-      <p>Per aggiornare la dashboard clicca su <strong>Carica Excel</strong> e seleziona il file aggiornato delle pratiche. La data dell'ultimo caricamento è visibile in alto a destra.</p>
-    </div>
-
-    <div class="help-section">
       <h4>I numeri in alto</h4>
       <p>I quattro riquadri mostrano i metri totali del progetto, quelli già autorizzati, le pratiche in scadenza a breve e la variazione rispetto alla settimana precedente. Cliccaci sopra per vedere le pratiche di riferimento.</p>
     </div>
@@ -4188,8 +4206,18 @@ function openHelp() { document.getElementById("helpOverlay").classList.add("open
       <p><strong>PDF Lotti</strong> e <strong>PDF Cluster</strong> generano un report stampabile. <strong>Excel Pratiche</strong> scarica la lista completa delle pratiche con tutti i dati.</p>
     </div>
 
+    <div class="help-section">
+      <h4>Mappa</h4>
+      <p>Mostra le tratte del progetto sul territorio. Puoi vedere la distribuzione geografica dei lotti e lo stato di avanzamento per zona.</p>
+    </div>
+
+    <div class="help-section">
+      <h4>Executive Summary</h4>
+      <p>Una vista sintetica pensata per la reportistica. Raccoglie i dati principali del progetto in un formato adatto alla condivisione con il cliente o la direzione.</p>
+    </div>
+
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);font-size:10px;color:var(--muted)">
-      Dalla barra in alto puoi aprire la <strong>Mappa</strong> per vedere le tratte sul territorio e l'<strong>Executive Summary</strong> per il report di progetto.
+      Mappa ed Executive Summary sono raggiungibili dalla barra in alto.
     </div>
   </div>
 </div>
