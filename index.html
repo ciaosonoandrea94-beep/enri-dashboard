@@ -579,7 +579,7 @@
     </div>
     <button class="btn" style="font-size:12px;padding:8px 16px;background:#5a3a8c" onclick="apriStorico()">📈 Storico</button>
     <button class="btn" style="font-size:12px;padding:8px 16px;background:#1e6b1e;color:#c8f0c8;border:1px solid #2e8c2e" onclick="exportTuttiXlsx()" title="Esporta tutte le pratiche con tutti i dati">📊 Excel Pratiche</button>
-    <button class="btn" style="font-size:12px;padding:8px 16px;background:#1e2d50;color:#8ab4d4;border:1px solid #2e4a7a" onclick="apriParamPrev()" title="Modifica i parametri di calcolo della previsione rilascio">⚙️ Param. Previsioni</button>
+    <button id="btnParamPrev" class="btn" style="font-size:12px;padding:8px 16px;background:#1e2d50;color:#8ab4d4;border:1px solid #2e4a7a;display:none" onclick="apriParamPrev()" title="Modifica i parametri di calcolo della previsione rilascio">⚙️ Param. Previsioni</button>
     <button class="help-btn" onclick="openHelp()" title="Guida alla Dashboard">?</button>
   </div>
 </div>
@@ -1029,6 +1029,41 @@ const JSONBIN_LOG_BIN_ID = '69c8fbdced015c742bc8e978';
 const ACCESSI_MAX        = 500;
 const ADMIN_USERNAME     = 'enri_admin'; // ← cambia con il tuo username admin
 
+// ── GOOGLE SHEETS AUTENTICAZIONE ─────────────────────────────────────────────
+// Incolla qui l'URL CSV del tuo Google Sheet (File → Condividi → Pubblica sul web → CSV)
+const GSHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR7A-W6R8hNYL0ViW7429KtsvfuaOHUxiwrMJNxUb51hQZQW-xlOKjkXkatm8XndTIMkdDYb6A6GICW/pub?gid=0&single=true&output=csv';
+
+function _parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g,'').toLowerCase());
+  return lines.slice(1).map(line => {
+    const cols = [];
+    let cur = '', inQ = false;
+    for (const ch of line) {
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === ',' && !inQ) { cols.push(cur.trim().replace(/"/g,'')); cur = ''; }
+      else { cur += ch; }
+    }
+    cols.push(cur.trim().replace(/"/g,''));
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = (cols[i] || '').trim());
+    return obj;
+  }).filter(r => r.nome);
+}
+
+async function _fetchUtenti() {
+  const url = GSHEET_CSV_URL + '&t=' + Date.now();
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Impossibile raggiungere il foglio utenti.');
+  return _parseCSV(await res.text());
+}
+
+function _applyRoleUI() {
+  const role = localStorage.getItem('_enri_role');
+  const btn = document.getElementById('btnParamPrev');
+  if (btn) btn.style.display = (role === 'admin') ? '' : 'none';
+}
+
 async function _logGetData() {
   const res = await fetch(`${JSONBIN_BASE}/${JSONBIN_LOG_BIN_ID}/latest`, {
     headers: { 'X-Master-Key': JSONBIN_MASTER_KEY }
@@ -1246,6 +1281,18 @@ function _buildLoginModal() {
           <input id="_loginInput" type="text"
             placeholder="${isReturning ? savedUser : 'Es. Mario Rossi'}"
             value="${isReturning ? savedUser : ''}"
+            onkeydown="if(event.key==='Enter')document.getElementById('_loginCodice').focus()"
+          />
+        </div>
+
+        <div style="margin-bottom:20px">
+          <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;
+            color:var(--muted);display:block;margin-bottom:8px">Codice accesso</label>
+          <input id="_loginCodice" type="password"
+            placeholder="Codice personale"
+            style="width:100%;padding:11px 16px;border:1.5px solid var(--border2);border-radius:10px;
+              font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;color:var(--text);
+              background:var(--surface);outline:none;transition:border-color .2s,box-shadow .2s;box-sizing:border-box;"
             onkeydown="if(event.key==='Enter')document.getElementById('_loginBtn').click()"
           />
           <div id="_loginError"></div>
@@ -1256,10 +1303,6 @@ function _buildLoginModal() {
           <span id="_loginBtnArrow">→</span>
         </button>
 
-        <div class="_loginDivider">
-          Accesso registrato nel log
-        </div>
-
       </div>
     </div>
   `;
@@ -1269,83 +1312,99 @@ function _buildLoginModal() {
   // Focus automatico
   setTimeout(() => {
     const inp = document.getElementById('_loginInput');
-    if (inp) { inp.focus(); if (inp.value) inp.select(); }
+    const cod = document.getElementById('_loginCodice');
+    if (inp) {
+      inp.style.cssText = `width:100%;padding:11px 16px;border:1.5px solid var(--border2);border-radius:10px;
+        font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;color:var(--text);
+        background:var(--surface);outline:none;transition:border-color .2s,box-shadow .2s;box-sizing:border-box;`;
+      inp.addEventListener('focus', () => { inp.style.borderColor='var(--accent)'; inp.style.boxShadow='0 0 0 3px rgba(11,49,130,.1)'; });
+      inp.addEventListener('blur',  () => { inp.style.borderColor='var(--border2)'; inp.style.boxShadow=''; });
+      cod.addEventListener('focus', () => { cod.style.borderColor='var(--accent)'; cod.style.boxShadow='0 0 0 3px rgba(11,49,130,.1)'; });
+      cod.addEventListener('blur',  () => { cod.style.borderColor='var(--border2)'; cod.style.boxShadow=''; });
+      inp.focus();
+      if (inp.value) inp.select();
+    }
   }, 180);
 
   document.getElementById('_loginBtn').addEventListener('click', () => _handleLogin());
 }
 
 async function _handleLogin() {
-  const input = document.getElementById('_loginInput');
-  const errEl = document.getElementById('_loginError');
-  const btn   = document.getElementById('_loginBtn');
+  const input   = document.getElementById('_loginInput');
+  const codEl   = document.getElementById('_loginCodice');
+  const errEl   = document.getElementById('_loginError');
+  const btn     = document.getElementById('_loginBtn');
   const btnText = document.getElementById('_loginBtnText');
-  const btnArrow = document.getElementById('_loginBtnArrow');
-  const nome  = (input?.value || '').trim();
+  const btnArrow= document.getElementById('_loginBtnArrow');
+  const nome    = (input?.value || '').trim();
+  const codice  = (codEl?.value || '').trim();
+
+  errEl.style.display = 'none';
 
   if (!nome || nome.length < 2) {
-    errEl.textContent = 'Inserisci almeno 2 caratteri.';
+    errEl.textContent = 'Inserisci nome e cognome.';
     errEl.style.display = 'block';
     input.focus();
     return;
   }
+  if (!codice) {
+    errEl.textContent = 'Inserisci il codice di accesso.';
+    errEl.style.display = 'block';
+    codEl.focus();
+    return;
+  }
 
-  if (btnText) btnText.textContent = 'Accesso in corso…';
+  if (btnText) btnText.textContent = 'Verifica in corso…';
   if (btnArrow) btnArrow.textContent = '';
   btn.disabled = true;
-  errEl.style.display = 'none';
 
   try {
-    const data = await _logGetData();
+    const utenti = await _fetchUtenti();
+    const trovato = utenti.find(u =>
+      u.nome?.toLowerCase().trim() === nome.toLowerCase().trim() &&
+      String(u.codice).trim() === String(codice).trim()
+    );
 
-    // Controlla se è un utente già registrato
-    const savedUser = localStorage.getItem('_enri_user');
-    const isReturning = !!savedUser;
-
-    if (isReturning && nome.toLowerCase() !== savedUser.toLowerCase()) {
-      // Nome non corrisponde a quello salvato
-      errEl.textContent = `Nome non riconosciuto. Hai usato "${savedUser}" in precedenza.`;
+    if (!trovato) {
+      errEl.textContent = 'Nome o codice non riconosciuti. Contatta l\'amministratore.';
       errEl.style.display = 'block';
-      if (btnText) btnText.textContent = isReturning ? 'Conferma e accedi' : 'Accedi';
+      if (btnText) btnText.textContent = 'Accedi';
       if (btnArrow) btnArrow.textContent = '→';
       btn.disabled = false;
+      codEl.value = '';
+      codEl.focus();
       return;
     }
 
-    // Registra utente se nuovo
-    if (!data.utenti.includes(nome)) {
-      data.utenti.push(nome);
-    }
-
-    // Log accesso
-    const ip = await _getIP();
-    const accesso = {
-      ts:       new Date().toISOString(),
-      utente:   nome,
-      ip:       ip,
-      ua:       navigator.userAgent.substring(0, 120),
-      schermo:  `${screen.width}×${screen.height}`
-    };
-    data.accessi.push(accesso);
-    if (data.accessi.length > ACCESSI_MAX) data.accessi.splice(0, data.accessi.length - ACCESSI_MAX);
-
-    await _logSaveData(data);
-
-    // Salva in localStorage per i prossimi accessi
+    const ruolo = (trovato.ruolo || 'user').toLowerCase();
     localStorage.setItem('_enri_user', nome);
+    localStorage.setItem('_enri_role', ruolo);
 
-    // Rimuovi overlay e mostra dashboard
+    // Log accesso (non bloccante)
+    _logGetData().then(data => {
+      const ip_p = _getIP();
+      ip_p.then(ip => {
+        data.accessi.push({
+          ts: new Date().toISOString(),
+          utente: nome,
+          ruolo: ruolo,
+          ip: ip,
+          ua: navigator.userAgent.substring(0, 120)
+        });
+        if (data.accessi.length > ACCESSI_MAX) data.accessi.splice(0, data.accessi.length - ACCESSI_MAX);
+        if (!data.utenti.includes(nome)) data.utenti.push(nome);
+        _logSaveData(data).catch(() => {});
+      }).catch(() => {});
+    }).catch(() => {});
+
     document.getElementById('loginOverlay').remove();
-
-    // Mostra il badge utente in topbar-left
     _showUserBadge(nome);
+    _applyRoleUI();
 
   } catch(e) {
     console.warn('[Login]', e.message);
-    // In caso di errore di rete, lascia entrare comunque
-    localStorage.setItem('_enri_user', nome);
-    document.getElementById('loginOverlay').remove();
-    _showUserBadge(nome);
+    errEl.textContent = 'Errore di connessione. Riprova tra qualche secondo.';
+    errEl.style.display = 'block';
     if (btnText) btnText.textContent = 'Accedi';
     if (btnArrow) btnArrow.textContent = '→';
     btn.disabled = false;
@@ -1356,8 +1415,9 @@ async function _handleLogin() {
 document.addEventListener('DOMContentLoaded', () => {
   const savedUser = localStorage.getItem('_enri_user');
   if (savedUser) {
-    // Già loggato: mostra badge e avvia direttamente senza modal
+    // Già loggato: mostra badge e applica ruolo senza modal
     _showUserBadge(savedUser);
+    _applyRoleUI();
   } else {
     _buildLoginModal();
   }
@@ -3700,6 +3760,11 @@ const PREV_PARAMS_LABELS  = [
 ];
 
 function apriParamPrev() {
+  const role = localStorage.getItem('_enri_role');
+  if (role !== 'admin') {
+    alert('Accesso riservato all\'amministratore.');
+    return;
+  }
   const p = window.PREV_PARAMS;
   const form = document.getElementById('paramPrevForm');
   form.innerHTML = PREV_PARAMS_LABELS.map(({key, label, desc}) => `
