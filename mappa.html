@@ -268,16 +268,20 @@
   }
   .bmap-card.active span { color:#2563eb; font-weight:700; }
 
-  /* Avviso zoom catastale */
+  /* Avviso zoom catastale — cliccabile */
   .catastale-notice {
     position:absolute; bottom:68px; left:50%; transform:translateX(-50%);
     z-index:900; background:#b45309; color:#fff;
     font-size:11px; font-family:'DM Sans',sans-serif; font-weight:500;
     padding:6px 16px 6px 12px; border-radius:20px;
     box-shadow:0 2px 10px #0004; white-space:nowrap;
-    display:none; pointer-events:none;
+    display:none; pointer-events:all; cursor:pointer;
+    transition:background 0.15s, box-shadow 0.15s;
+    user-select:none;
   }
   .catastale-notice.visible { display:flex; align-items:center; gap:6px; }
+  .catastale-notice:hover { background:#92400e; box-shadow:0 4px 16px #0006; }
+  .catastale-notice:active { opacity:0.85; }
   /* Position basemap control flush below zoom control, same column */
   .leaflet-top.leaflet-left {
     display: flex;
@@ -344,8 +348,10 @@
 <div class="wrap">
   <div id="loadingOverlay"><div class="spinner"></div><div class="loading-text">Caricamento tracciati...</div></div>
   <div id="map"></div>
-  <div id="catastaleNotice" class="catastale-notice">
-    🔍 Zoom al livello 14+ per vedere le particelle catastali
+  <div id="catastaleNotice" class="catastale-notice"
+       onclick="map.setView(map.getCenter(), 14, {animate:true})"
+       title="Clicca per zoomare al livello 14">
+    🔍 Clicca per zoomare e vedere le particelle catastali
   </div>
   <div class="sidebar">
     <div class="sidebar-head">
