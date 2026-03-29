@@ -579,7 +579,6 @@
     </div>
     <button class="btn" style="font-size:12px;padding:8px 16px;background:#5a3a8c" onclick="apriStorico()">📈 Storico</button>
     <button class="btn" style="font-size:12px;padding:8px 16px;background:#1e6b1e;color:#c8f0c8;border:1px solid #2e8c2e" onclick="exportTuttiXlsx()" title="Esporta tutte le pratiche con tutti i dati">📊 Excel Pratiche</button>
-    <button id="btnParamPrev" class="btn" style="font-size:12px;padding:8px 16px;background:#1e2d50;color:#8ab4d4;border:1px solid #2e4a7a;display:none" onclick="apriParamPrev()" title="Modifica i parametri di calcolo della previsione rilascio">⚙️ Param. Previsioni</button>
     <button class="help-btn" onclick="openHelp()" title="Guida alla Dashboard">?</button>
   </div>
 </div>
@@ -1058,11 +1057,46 @@ async function _fetchUtenti() {
   return _parseCSV(await res.text());
 }
 
-function _applyRoleUI() {
-  const role = localStorage.getItem('_enri_role');
-  const btn = document.getElementById('btnParamPrev');
-  if (btn) btn.style.display = (role === 'admin') ? '' : 'none';
+// ── SESSION TRACKING ─────────────────────────────────────────────────────────
+let _sessionStart   = Date.now();
+let _sessionLotti   = [];   // lotti aperti in questa sessione
+let _sessionAperture = 0;   // totale aperture modal
+let _sessionLogIdx  = -1;   // indice dell'accesso corrente nel log (settato al login)
+
+function _trackLotto(lotto) {
+  _sessionAperture++;
+  if (lotto && !_sessionLotti.includes(lotto)) _sessionLotti.push(lotto);
 }
+
+async function _saveSessionData() {
+  if (_sessionLogIdx < 0) return;
+  try {
+    const data = await _logGetData();
+    const entry = data.accessi[_sessionLogIdx];
+    if (!entry) return;
+    entry.durata  = Math.round((Date.now() - _sessionStart) / 60000); // minuti
+    entry.lotti   = [..._sessionLotti];
+    entry.nAperture = _sessionAperture;
+    await _logSaveData(data);
+  } catch(_) {}
+}
+
+window.addEventListener('beforeunload', () => {
+  // best-effort con keepalive
+  if (_sessionLogIdx < 0) return;
+  _logGetData().then(data => {
+    const entry = data.accessi[_sessionLogIdx];
+    if (!entry) return;
+    entry.durata    = Math.round((Date.now() - _sessionStart) / 60000);
+    entry.lotti     = [..._sessionLotti];
+    entry.nAperture = _sessionAperture;
+    fetch(`${JSONBIN_BASE}/${JSONBIN_LOG_BIN_ID}`, {
+      method: 'PUT', keepalive: true,
+      headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_MASTER_KEY },
+      body: JSON.stringify(data)
+    });
+  }).catch(() => {});
+});
 
 async function _logGetData() {
   const res = await fetch(`${JSONBIN_BASE}/${JSONBIN_LOG_BIN_ID}/latest`, {
@@ -1404,22 +1438,27 @@ async function _handleLogin() {
     _logGetData().then(data => {
       const ip_p = _getIP();
       ip_p.then(ip => {
-        data.accessi.push({
+        const entry = {
           ts: new Date().toISOString(),
           utente: nome,
           ruolo: ruolo,
           ip: ip,
-          ua: navigator.userAgent.substring(0, 120)
-        });
+          ua: navigator.userAgent.substring(0, 120),
+          durata: 0,
+          lotti: [],
+          nAperture: 0
+        };
+        data.accessi.push(entry);
         if (data.accessi.length > ACCESSI_MAX) data.accessi.splice(0, data.accessi.length - ACCESSI_MAX);
         if (!data.utenti.includes(nome)) data.utenti.push(nome);
+        _sessionLogIdx = data.accessi.length - 1;
+        _sessionStart  = Date.now();
         _logSaveData(data).catch(() => {});
       }).catch(() => {});
     }).catch(() => {});
 
     document.getElementById('loginOverlay').remove();
     _showUserBadge(nome);
-    _applyRoleUI();
 
   } catch(e) {
     console.warn('[Login]', e.message);
@@ -1437,7 +1476,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (savedUser) {
     // Già loggato: mostra badge e applica ruolo senza modal
     _showUserBadge(savedUser);
-    _applyRoleUI();
   } else {
     _buildLoginModal();
   }
@@ -1670,6 +1708,7 @@ function parseNum(s) { if(!s||s.trim()==='') return 0; return parseFloat(s.repla
 function parsePct(s) { if(!s||s.trim()==='') return 0; return parseFloat(s.replace('%','').replace(',','.'))/100; }
 
 function openModal(lotto, statiMetri, totale) {
+  _trackLotto(lotto);
   document.getElementById('modalTitle').textContent = `Lotto ${lotto} — Dettaglio`;
   const body = document.getElementById('modalBody');
 
@@ -4252,6 +4291,9 @@ function openHelp() { document.getElementById("helpOverlay").classList.add("open
     </div>
   </div>
 
+  <!-- Statistiche -->
+  <div id="adminStats" style="margin-bottom:28px"></div>
+
   <!-- Utenti registrati -->
   <div style="margin-bottom:24px">
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;
@@ -4278,10 +4320,14 @@ function openHelp() { document.getElementById("helpOverlay").classList.add("open
             color:var(--muted);text-align:left;font-weight:700;border-bottom:1px solid var(--border)">IP</th>
           <th style="padding:8px 14px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;
             color:var(--muted);text-align:left;font-weight:700;border-bottom:1px solid var(--border)">Browser</th>
+          <th style="padding:8px 14px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;
+            color:var(--muted);text-align:left;font-weight:700;border-bottom:1px solid var(--border)">Durata</th>
+          <th style="padding:8px 14px;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;
+            color:var(--muted);text-align:left;font-weight:700;border-bottom:1px solid var(--border)">Lotti aperti</th>
         </tr>
       </thead>
       <tbody id="adminAccessiBody">
-        <tr><td colspan="5" style="padding:20px;text-align:center;color:var(--muted);font-size:12px">Caricamento…</td></tr>
+        <tr><td colspan="7" style="padding:20px;text-align:center;color:var(--muted);font-size:12px">Caricamento…</td></tr>
       </tbody>
     </table>
   </div>
@@ -4320,7 +4366,73 @@ async function _adminLoad() {
     document.getElementById('adminUtentiCount').textContent  = `👥 ${data.utenti.length} utenti`;
     document.getElementById('adminAccessiCount').textContent = `📋 ${data.accessi.length} accessi`;
 
-    // Lista utenti
+    // ── STATISTICHE ──────────────────────────────────────────────────────────
+    const accessi = data.accessi;
+    const statsEl = document.getElementById('adminStats');
+
+    // Durata media (solo sessioni con durata > 0)
+    const sessioni = accessi.filter(a => a.durata > 0);
+    const durataMedia = sessioni.length
+      ? Math.round(sessioni.reduce((s, a) => s + a.durata, 0) / sessioni.length)
+      : 0;
+
+    // Utente più attivo
+    const countUtente = {};
+    accessi.forEach(a => { if (a.utente) countUtente[a.utente] = (countUtente[a.utente] || 0) + 1; });
+    const topUtente = Object.entries(countUtente).sort((a,b) => b[1]-a[1])[0];
+
+    // Ora di punta
+    const countOra = Array(24).fill(0);
+    accessi.forEach(a => { if (a.ts) countOra[new Date(a.ts).getHours()]++; });
+    const oraMax = countOra.indexOf(Math.max(...countOra));
+
+    // Lotto più visto
+    const countLotto = {};
+    accessi.forEach(a => (a.lotti || []).forEach(l => { countLotto[l] = (countLotto[l] || 0) + 1; }));
+    const topLotti = Object.entries(countLotto).sort((a,b) => b[1]-a[1]).slice(0, 5);
+    const maxLottoVal = topLotti[0]?.[1] || 1;
+
+    statsEl.innerHTML = `
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;
+        color:var(--muted);margin-bottom:12px">Statistiche</div>
+
+      <!-- Card row -->
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px">
+        ${[
+          ['⏱', 'Durata media sessione', durataMedia ? durataMedia + ' min' : '—'],
+          ['👤', 'Utente più attivo',     topUtente ? `${topUtente[0]} (${topUtente[1]})` : '—'],
+          ['🕐', 'Ora di punta',          countOra[oraMax] > 0 ? `${oraMax}:00 – ${oraMax+1}:00` : '—'],
+          ['🏆', 'Lotto più visto',       topLotti[0] ? `${topLotti[0][0]} (${topLotti[0][1]}×)` : '—'],
+        ].map(([icon, label, val]) => `
+          <div style="flex:1;min-width:160px;background:var(--surface);border:1px solid var(--border);
+            border-radius:10px;padding:14px 18px;">
+            <div style="font-size:18px;margin-bottom:4px">${icon}</div>
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:4px">${label}</div>
+            <div style="font-size:14px;font-weight:700;color:var(--text)">${val}</div>
+          </div>
+        `).join('')}
+      </div>
+
+      <!-- Grafico lotti -->
+      ${topLotti.length ? `
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:12px">
+            Lotti più visitati
+          </div>
+          ${topLotti.map(([lotto, count]) => `
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <div style="width:70px;font-size:11px;font-weight:600;color:var(--text2);white-space:nowrap">Lotto ${lotto}</div>
+              <div style="flex:1;height:8px;background:var(--surface2);border-radius:4px;overflow:hidden">
+                <div style="height:100%;width:${Math.round(count/maxLottoVal*100)}%;background:var(--accent);border-radius:4px;transition:width .4s"></div>
+              </div>
+              <div style="width:28px;font-size:11px;font-family:'Fira Code',monospace;color:var(--muted);text-align:right">${count}</div>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+    `;
+
+    // ── LISTA UTENTI ─────────────────────────────────────────────────────────
     const utentiEl = document.getElementById('adminUtentiList');
     if (data.utenti.length === 0) {
       utentiEl.innerHTML = '<span style="font-size:12px;color:var(--muted)">Nessun utente ancora</span>';
@@ -4330,21 +4442,20 @@ async function _adminLoad() {
           border-radius:20px;background:var(--surface);border:1px solid var(--border2);
           font-size:11px;color:var(--text2);font-weight:500;">
           👤 ${u}
-          <span onclick="_adminRemoveUser('${u.replace(/'/g,"\\'")}', this)" 
+          <span onclick="_adminRemoveUser('${u.replace(/'/g,"\\'")}', this)"
             style="cursor:pointer;color:var(--muted2);font-size:13px;line-height:1;margin-left:2px"
             title="Rimuovi utente">×</span>
         </span>
       `).join('');
     }
 
-    // Tabella accessi (ultimi prima)
+    // ── TABELLA ACCESSI ───────────────────────────────────────────────────────
     const tbody = document.getElementById('adminAccessiBody');
     const reversed = [...data.accessi].reverse();
     if (reversed.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--muted);font-size:12px">Nessun accesso registrato</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="padding:20px;text-align:center;color:var(--muted);font-size:12px">Nessun accesso registrato</td></tr>';
     } else {
       tbody.innerHTML = reversed.map((a, i) => {
-        // Parse browser da user agent
         const ua = a.ua || '';
         let browser = '—';
         if (ua.includes('Edg/')) browser = 'Edge';
@@ -4352,36 +4463,31 @@ async function _adminLoad() {
         else if (ua.includes('Firefox/')) browser = 'Firefox';
         else if (ua.includes('Safari/') && !ua.includes('Chrome')) browser = 'Safari';
         else if (ua.includes('OPR/') || ua.includes('Opera/')) browser = 'Opera';
-        // OS
         let os = '';
-        if (ua.includes('Windows')) os = ' · Windows';
+        if (ua.includes('Windows')) os = ' · Win';
         else if (ua.includes('Mac OS')) os = ' · Mac';
         else if (ua.includes('iPhone') || ua.includes('iPad')) os = ' · iOS';
-        else if (ua.includes('Android')) os = ' · Android';
+        else if (ua.includes('Android')) os = ' · And';
         else if (ua.includes('Linux')) os = ' · Linux';
+
+        const durata = a.durata > 0 ? `${a.durata} min` : '—';
+        const lotti  = (a.lotti && a.lotti.length) ? a.lotti.map(l => `<span style="display:inline-block;padding:1px 6px;border-radius:4px;background:var(--surface2);border:1px solid var(--border);font-size:9px;margin:1px">${l}</span>`).join('') : '—';
+
         return `
         <tr style="border-bottom:1px solid var(--border);${i%2===1?'background:var(--surface2)':''}">
-          <td style="padding:7px 14px;font-size:11px;font-family:'Fira Code',monospace;color:var(--text2);white-space:nowrap">
-            ${_formatDate(a.ts)}
-          </td>
-          <td style="padding:7px 14px;font-size:12px;font-weight:600;color:var(--accent);white-space:nowrap">
-            ${a.utente || '—'}
-          </td>
-          <td style="padding:7px 14px;font-size:11px;color:var(--muted);white-space:nowrap">
-            ${a.ruolo || 'user'}
-          </td>
-          <td style="padding:7px 14px;font-size:11px;font-family:'Fira Code',monospace;color:var(--muted);white-space:nowrap">
-            ${a.ip || '—'}
-          </td>
-          <td style="padding:7px 14px;font-size:11px;color:var(--muted);white-space:nowrap">
-            ${browser}${os}
-          </td>
+          <td style="padding:7px 14px;font-size:11px;font-family:'Fira Code',monospace;color:var(--text2);white-space:nowrap">${_formatDate(a.ts)}</td>
+          <td style="padding:7px 14px;font-size:12px;font-weight:600;color:var(--accent);white-space:nowrap">${a.utente || '—'}</td>
+          <td style="padding:7px 14px;font-size:11px;color:var(--muted);white-space:nowrap">${a.ruolo || 'user'}</td>
+          <td style="padding:7px 14px;font-size:11px;font-family:'Fira Code',monospace;color:var(--muted);white-space:nowrap">${a.ip || '—'}</td>
+          <td style="padding:7px 14px;font-size:11px;color:var(--muted);white-space:nowrap">${browser}${os}</td>
+          <td style="padding:7px 14px;font-size:11px;font-family:'Fira Code',monospace;color:var(--muted);white-space:nowrap">${durata}</td>
+          <td style="padding:7px 14px;font-size:11px">${lotti}</td>
         </tr>`;
       }).join('');
     }
   } catch(e) {
     document.getElementById('adminAccessiBody').innerHTML =
-      `<tr><td colspan="4" style="padding:20px;text-align:center;color:#C23B22;font-size:12px">Errore caricamento: ${e.message}</td></tr>`;
+      `<tr><td colspan="7" style="padding:20px;text-align:center;color:#C23B22;font-size:12px">Errore caricamento: ${e.message}</td></tr>`;
   }
 }
 
