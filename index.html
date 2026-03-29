@@ -72,14 +72,35 @@
   /* ── TOPBAR ── */
   .topbar {
     display:flex; align-items:center; justify-content:space-between;
-    padding:0 28px; height:56px;
+    padding:0 20px; height:52px;
     background:var(--surface);
     border-bottom:1px solid var(--border);
     box-shadow: var(--sh-xs);
     position:sticky; top:0; z-index:50;
   }
-  .topbar-left  { display:flex; align-items:center; gap:14px; }
-  .topbar-right { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .topbar-left  { display:flex; align-items:center; gap:12px; flex-shrink:0; }
+  .topbar-right { display:flex; align-items:center; gap:5px; flex-wrap:nowrap; }
+
+  /* PDF dropdown */
+  .pdf-dropdown { position:relative; display:inline-flex; }
+  .pdf-dropdown-menu {
+    display:none;
+    position:absolute; top:calc(100% + 6px); right:0;
+    background:var(--surface); border:1px solid var(--border2);
+    border-radius:8px; box-shadow:var(--sh-md);
+    min-width:150px; overflow:hidden; z-index:200;
+  }
+  .pdf-dropdown.open .pdf-dropdown-menu { display:block; }
+  .pdf-dropdown-menu button {
+    display:flex; align-items:center; gap:8px;
+    width:100%; padding:9px 14px;
+    background:none; border:none; cursor:pointer;
+    font-family:'Plus Jakarta Sans',sans-serif; font-size:12px; font-weight:600;
+    color:var(--text); text-align:left;
+    transition:background 0.15s;
+  }
+  .pdf-dropdown-menu button:hover { background:var(--surface2); }
+  .pdf-dropdown-menu button:first-child { border-bottom:1px solid var(--border); }
 
   .logo {
     font-family:'Bricolage Grotesque', sans-serif;
@@ -468,10 +489,10 @@
 
   /* ── RESPONSIVE ── */
   @media (max-width:768px) {
-    .topbar { padding:0 14px; height:auto; flex-wrap:wrap; gap:8px; padding-top:10px; padding-bottom:10px; }
+    .topbar { padding:0 10px; height:auto; flex-wrap:wrap; gap:6px; padding-top:8px; padding-bottom:8px; }
     .page-title { display:none; }
-    .topbar-right { gap:6px; flex-wrap:wrap; }
-    .topbar-right a, .topbar-right button { font-size:10px; padding:4px 10px; }
+    .topbar-right { gap:4px; flex-wrap:wrap; }
+    .topbar-right a, .topbar-right button { font-size:10px; padding:5px 10px; }
     .main { padding:12px 14px; gap:14px; }
     .kpi-phase-wrapper { flex-direction:column; gap:8px; }
     .phase-panel.phase-submission,
@@ -549,8 +570,13 @@
     <a href="mappa.html" style="font-size:12px;padding:8px 16px;border-radius:7px;background:var(--surface2);color:var(--text);border:1px solid var(--border);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;text-decoration:none;transition:opacity 0.2s;white-space:nowrap" onmouseover="this.style.opacity=0.75" onmouseout="this.style.opacity=1">🗺 Mappa</a>
     <a href="executive_summary.html" style="font-size:12px;padding:8px 16px;border-radius:7px;background:var(--surface2);color:var(--text);border:1px solid var(--border);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;text-decoration:none;transition:opacity 0.2s;white-space:nowrap" onmouseover="this.style.opacity=0.75" onmouseout="this.style.opacity=1">📋 Executive</a>
 
-    <button class="btn" style="font-size:12px;padding:8px 16px;background:#2f5496" onclick="stampaLotti()">⬇ PDF Lotti</button>
-    <button class="btn" style="font-size:12px;padding:8px 16px;background:#1a5c3a" onclick="stampaCluster()">⬇ PDF Cluster</button>
+    <div class="pdf-dropdown" id="pdfDropdown">
+      <button class="btn" style="font-size:12px;padding:8px 16px;background:#2f5496" onclick="togglePdfDropdown(event)">⬇ Stampa PDF ▾</button>
+      <div class="pdf-dropdown-menu">
+        <button onclick="stampaLotti();closePdfDropdown()">📄 Per Lotti</button>
+        <button onclick="stampaCluster();closePdfDropdown()">📄 Per Cluster</button>
+      </div>
+    </div>
     <button class="btn" style="font-size:12px;padding:8px 16px;background:#5a3a8c" onclick="apriStorico()">📈 Storico</button>
     <button class="btn" style="font-size:12px;padding:8px 16px;background:#1e6b1e;color:#c8f0c8;border:1px solid #2e8c2e" onclick="exportTuttiXlsx()" title="Esporta tutte le pratiche con tutti i dati">📊 Excel Pratiche</button>
     <button class="btn" style="font-size:12px;padding:8px 16px;background:#1e2d50;color:#8ab4d4;border:1px solid #2e4a7a" onclick="apriParamPrev()" title="Modifica i parametri di calcolo della previsione rilascio">⚙️ Param. Previsioni</button>
@@ -1807,6 +1833,20 @@ function loadCompare(input) {
   reader.readAsText(file);
   input.value = '';
 }
+
+function togglePdfDropdown(e) {
+  e.stopPropagation();
+  const d = document.getElementById('pdfDropdown');
+  d.classList.toggle('open');
+}
+function closePdfDropdown() {
+  const d = document.getElementById('pdfDropdown');
+  if(d) d.classList.remove('open');
+}
+document.addEventListener('click', function(e) {
+  const d = document.getElementById('pdfDropdown');
+  if(d && !d.contains(e.target)) d.classList.remove('open');
+});
 
 function stampaLotti() {
   const style = document.createElement('style');
