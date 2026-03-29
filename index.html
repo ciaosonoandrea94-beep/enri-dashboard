@@ -1232,9 +1232,6 @@ function _buildLoginModal() {
 
       <!-- SINISTRA: branding -->
       <div id="_loginLeft">
-        <div class="_loginDots">
-          ${Array(20).fill('<div class="_loginDot"></div>').join('')}
-        </div>
 
         <div style="position:relative;z-index:1">
           <div style="font-family:'Fira Code',monospace;font-size:9px;font-weight:500;
@@ -1255,7 +1252,7 @@ function _buildLoginModal() {
         <div style="position:relative;z-index:1">
           <div style="font-size:9px;letter-spacing:.15em;text-transform:uppercase;
             color:rgba(255,255,255,.25);font-family:'Fira Code',monospace">
-            Sistema di monitoraggio
+            &nbsp;
           </div>
         </div>
       </div>
@@ -4150,49 +4147,49 @@ function openHelp() { document.getElementById("helpOverlay").classList.add("open
 <div id="helpOverlay" onclick="if(event.target===this)document.getElementById('helpOverlay').classList.remove('open')">
   <div class="help-modal">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-      <h3>📊 Guida — Dashboard ENRI</h3>
+      <h3>Guida rapida</h3>
       <span onclick="document.getElementById('helpOverlay').classList.remove('open')"
         style="cursor:pointer;color:var(--muted);font-size:22px;line-height:1">×</span>
     </div>
-    <div style="font-size:11px;color:var(--muted)">Come leggere questa pagina</div>
+    <div style="font-size:11px;color:var(--muted)">Come usare la dashboard</div>
 
     <div class="help-section">
-      <h4>📥 Aggiornamento dati</h4>
-      <p>I dati vengono aggiornati caricando il file Excel delle pratiche tramite il pulsante <strong>Carica Excel</strong>. La dashboard legge anche il CSV <em>riepilogo.csv</em> per i dati di lunghezza per lotto. La data dell'ultimo aggiornamento è visibile in alto a destra.</p>
+      <h4>Aggiornare i dati</h4>
+      <p>Per aggiornare la dashboard clicca su <strong>Carica Excel</strong> e seleziona il file aggiornato delle pratiche. La data dell'ultimo caricamento è visibile in alto a destra.</p>
     </div>
 
     <div class="help-section">
-      <h4>🎯 KPI di Progetto</h4>
-      <p>I 4 riquadri in alto mostrano i KPI principali: metri totali del progetto, metri già autorizzati (OTTENUTO), pratiche in previsione di rilascio a breve e la variazione rispetto all'aggiornamento precedente. Clicca su ciascun KPI per vedere il dettaglio delle pratiche coinvolte.</p>
+      <h4>I numeri in alto</h4>
+      <p>I quattro riquadri mostrano i metri totali del progetto, quelli già autorizzati, le pratiche in scadenza a breve e la variazione rispetto alla settimana precedente. Cliccaci sopra per vedere le pratiche di riferimento.</p>
     </div>
 
     <div class="help-section">
-      <h4>🍩 Distribuzione Stati (donut)</h4>
-      <p>Il grafico a ciambella mostra la distribuzione percentuale dei metri di fibra per stato autorizzativo. La % al centro indica la quota già completamente autorizzata (OTTENUTO) sul totale del progetto.</p>
+      <h4>Il grafico a ciambella</h4>
+      <p>Mostra in che stato si trovano i metri di fibra sul totale. La percentuale al centro indica la quota già completamente autorizzata.</p>
     </div>
 
     <div class="help-section">
-      <h4>📊 Barre per Lotto</h4>
-      <p>Ogni riga mostra l'avanzamento di un lotto con una barra colorata segmentata per stato. I lotti <strong>Attivi</strong> (in lavorazione) sono separati dai lotti <strong>In Avvio</strong> (non ancora partiti). Le righe in grassetto <em>Totale attivi ↗</em> e <em>Totale avvio ↗</em> mostrano l'aggregato. Clicca su qualsiasi riga per il dettaglio del lotto.</p>
+      <h4>Le barre per lotto</h4>
+      <p>Ogni riga è un lotto. I colori mostrano come si distribuiscono le pratiche al suo interno. I lotti attivi sono separati da quelli non ancora partiti. Clicca su una riga per aprire il dettaglio.</p>
     </div>
 
     <div class="help-section">
-      <h4>📅 Previsione Rilascio</h4>
-      <p>I badge colorati sulle pratiche indicano quando ci si aspetta il rilascio dell'autorizzazione in base ai parametri configurati (es. 45 gg per un Comune, 90 gg per ANAS). Verde = nei tempi, arancione = in scadenza (≤7 gg), rosso = già scaduta. Usa <strong>⚙️ Param. Previsioni</strong> per modificare i giorni attesi per ente.</p>
+      <h4>Le previsioni di rilascio</h4>
+      <p>Ogni pratica ha un badge colorato che indica quando è atteso il rilascio. <span style="color:var(--ottenuto);font-weight:600">Verde</span> = nei tempi · <span style="color:#C08A14;font-weight:600">Arancione</span> = meno di 7 giorni · <span style="color:var(--firma);font-weight:600">Rosso</span> = scaduta.</p>
     </div>
 
     <div class="help-section">
-      <h4>📈 Storico Avanzamento</h4>
-      <p>Il bottone <strong>📈 Storico</strong> apre un grafico dell'avanzamento nel tempo. Ogni punto rappresenta uno snapshot salvato automaticamente ogni volta che i dati cambiano. Puoi visualizzare l'andamento per lotto o per cluster.</p>
+      <h4>Lo storico</h4>
+      <p>Il pulsante <strong>Storico</strong> apre il grafico dell'avanzamento nel tempo. Puoi vedere come sono cambiati i metri autorizzati settimana per settimana, per lotto o per cluster.</p>
     </div>
 
     <div class="help-section">
-      <h4>📤 Esportazioni</h4>
-      <p><strong>⬇ PDF Lotti</strong> — stampa la lista lotti in PDF · <strong>⬇ PDF Cluster</strong> — versione per cluster · <strong>📊 Excel Pratiche</strong> — scarica tutte le pratiche con tutti i dati in formato Excel.</p>
+      <h4>Esportazioni</h4>
+      <p><strong>PDF Lotti</strong> e <strong>PDF Cluster</strong> generano un report stampabile. <strong>Excel Pratiche</strong> scarica la lista completa delle pratiche con tutti i dati.</p>
     </div>
 
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);font-size:10px;color:var(--muted)">
-      💡 Dalla Dashboard puoi navigare alla <strong>🗺 Mappa</strong> per vedere geograficamente le tratte, e all'<strong>📋 Executive Summary</strong> per il report di progetto.
+      Dalla barra in alto puoi aprire la <strong>Mappa</strong> per vedere le tratte sul territorio e l'<strong>Executive Summary</strong> per il report di progetto.
     </div>
   </div>
 </div>
@@ -4269,8 +4266,8 @@ function openHelp() { document.getElementById("helpOverlay").classList.add("open
 
 <script>
 function _adminOpen() {
-  const user = localStorage.getItem('_enri_user');
-  if (!user || user.toLowerCase() !== ADMIN_USERNAME.toLowerCase()) {
+  const role = localStorage.getItem('_enri_role');
+  if (role !== 'admin') {
     alert('Accesso admin non autorizzato.');
     return;
   }
@@ -4348,6 +4345,7 @@ async function _adminRemoveUser(nome, el) {
 function _adminClearUser() {
   if (!confirm('Questo ti disconnetterà e dovrai reinserire il nome al prossimo accesso. Continuare?')) return;
   localStorage.removeItem('_enri_user');
+  localStorage.removeItem('_enri_role');
   location.reload();
 }
 </script>
